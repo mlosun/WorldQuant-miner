@@ -70,6 +70,25 @@ class ModelFleetManager:
             logger.warning(f"Could not load state: {e}")
             self.current_model_index = 0
             self.vram_error_count = 0
+        
+        # Auto-select the best available model on startup
+        self.auto_select_available_model()
+    
+    def auto_select_available_model(self):
+        """Automatically select the best available model on startup."""
+        best_available_model = self.select_best_available_model()
+        
+        # Find the index of the best available model in our fleet
+        for i, model_info in enumerate(self.model_fleet):
+            if model_info.name == best_available_model:
+                if i != self.current_model_index:
+                    logger.info(f"Auto-switching to available model: {best_available_model}")
+                    self.current_model_index = i
+                    self.save_state()
+                break
+        else:
+            # If the best available model is not in our fleet, keep current index
+            logger.info(f"Best available model {best_available_model} not in fleet, keeping current selection")
     
     def save_state(self):
         """Save the current model state to file."""
@@ -106,26 +125,35 @@ class ModelFleetManager:
             logger.error(f"Error getting available models: {e}")
             return []
     
+    def select_best_available_model(self) -> str:
+        """Select the best available model from the fleet, prioritizing larger models if available."""
+        available_models = self.get_available_models()
+        
+        # Try to find the best available model from our fleet
+        for model_info in self.model_fleet:
+            if model_info.name in available_models:
+                logger.info(f"Selected available model: {model_info.name}")
+                return model_info.name
+        
+        # If no models from our fleet are available, use the first available model
+        if available_models:
+            logger.warning(f"No preferred models available, using: {available_models[0]}")
+            return available_models[0]
+        
+        # If no models are available at all, return the default
+        logger.error("No models available, using default: llama3.2:3b")
+        return "llama3.2:3b"
+    
     def ensure_model_available(self, model_name: str) -> bool:
-        """Ensure a specific model is available, download if needed."""
+        """Check if a specific model is available, without downloading."""
         available_models = self.get_available_models()
         
         if model_name in available_models:
-            logger.info(f"Model {model_name} is already available")
+            logger.info(f"Model {model_name} is available")
             return True
         
-        logger.info(f"Model {model_name} not found, downloading...")
-        try:
-            response = requests.post(f"{self.ollama_url}/api/pull", json={'name': model_name})
-            if response.status_code == 200:
-                logger.info(f"Successfully downloaded model {model_name}")
-                return True
-            else:
-                logger.error(f"Failed to download model {model_name}: {response.status_code}")
-                return False
-        except Exception as e:
-            logger.error(f"Error downloading model {model_name}: {e}")
-            return False
+        logger.warning(f"Model {model_name} is not available (skipping auto-download)")
+        return False
     
     def detect_vram_error(self, log_line: str) -> bool:
         """Detect VRAM recovery timeout errors in log lines."""
@@ -159,35 +187,36 @@ class ModelFleetManager:
         return False
     
     def downgrade_model(self) -> bool:
-        """Downgrade to the next smaller model in the fleet."""
-        if self.current_model_index >= len(self.model_fleet) - 1:
-            logger.error("Already using the smallest model in the fleet!")
-            logger.warning("VRAM error persists with smallest model - triggering application reset")
-            return self.trigger_application_reset()
+        """Downgrade to the next available smaller model in the fleet."""
+        # Find the next available model that's smaller than current
+        current_model = self.get_current_model()
+        available_models = self.get_available_models()
         
-        old_model = self.get_current_model()
-        self.current_model_index += 1
-        new_model = self.get_current_model()
+        # Look for a smaller available model
+        for i in range(self.current_model_index + 1, len(self.model_fleet)):
+            candidate_model = self.model_fleet[i]
+            if candidate_model.name in available_models:
+                old_model = current_model
+                self.current_model_index = i
+                new_model = self.get_current_model()
+                
+                logger.warning(f"Downgrading model: {old_model.name} -> {new_model.name}")
+                
+                # Reset VRAM error count
+                self.vram_error_count = 0
+                
+                # Save state
+                self.save_state()
+                
+                # Update the alpha generator configuration
+                self.update_alpha_generator_config(new_model.name)
+                
+                logger.info(f"Successfully downgraded to {new_model.name}")
+                return True
         
-        logger.warning(f"Downgrading model: {old_model.name} -> {new_model.name}")
-        
-        # Ensure the new model is available
-        if not self.ensure_model_available(new_model.name):
-            logger.error(f"Failed to ensure model {new_model.name} is available")
-            self.current_model_index -= 1  # Revert
-            return False
-        
-        # Reset VRAM error count
-        self.vram_error_count = 0
-        
-        # Save state
-        self.save_state()
-        
-        # Update the alpha generator configuration
-        self.update_alpha_generator_config(new_model.name)
-        
-        logger.info(f"Successfully downgraded to {new_model.name}")
-        return True
+        # If no smaller available models found, trigger application reset
+        logger.error("No smaller available models found for downgrade!")
+        return self.trigger_application_reset()
     
     def trigger_application_reset(self) -> bool:
         """Trigger a complete application reset when VRAM issues persist with smallest model."""
@@ -253,12 +282,25 @@ class ModelFleetManager:
         }
     
     def reset_to_largest_model(self):
-        """Reset to the largest model in the fleet."""
-        self.current_model_index = 0
-        self.vram_error_count = 0
-        self.save_state()
-        logger.info("Reset to largest model in fleet")
-        return self.update_alpha_generator_config(self.get_current_model().name)
+        """Reset to the largest available model in the fleet."""
+        # Find the largest available model
+        available_models = self.get_available_models()
+        
+        for i, model_info in enumerate(self.model_fleet):
+            if model_info.name in available_models:
+                self.current_model_index = i
+                self.vram_error_count = 0
+                self.save_state()
+                logger.info(f"Reset to largest available model: {model_info.name}")
+                return self.update_alpha_generator_config(model_info.name)
+        
+        # If no preferred models are available, use the first available model
+        if available_models:
+            logger.warning(f"No preferred models available, using: {available_models[0]}")
+            return True
+        
+        logger.error("No models available for reset")
+        return False
 
 class AlphaOrchestrator:
     def __init__(self, credentials_path: str, ollama_url: str = "http://localhost:11434"):
