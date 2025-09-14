@@ -339,7 +339,7 @@ class AlphaOrchestrator:
         self.ollama_url = ollama_url
         self.setup_auth(credentials_path)
         self.last_submission_date = None
-        self.submission_log_file = "submission_log.json"
+        self.提交日志文件 = "提交日志.json"
         self.load_submission_history()
 
         # Concurrency control
@@ -378,9 +378,9 @@ class AlphaOrchestrator:
 
     def load_submission_history(self):
         """Load submission history to track daily submissions."""
-        if os.path.exists(self.submission_log_file):
+        if os.path.exists(self.提交日志文件):
             try:
-                with open(self.submission_log_file, "r") as f:
+                with open(self.提交日志文件, "r") as f:
                     data = json.load(f)
                     self.last_submission_date = data.get("last_submission_date")
                     logger.info(
@@ -398,7 +398,7 @@ class AlphaOrchestrator:
             "last_submission_date": self.last_submission_date,
             "updated_at": datetime.now().isoformat(),
         }
-        with open(self.submission_log_file, "w") as f:
+        with open(self.提交日志文件, "w") as f:
             json.dump(data, f, indent=2)
 
     def start_vram_monitoring(self):

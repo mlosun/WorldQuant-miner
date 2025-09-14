@@ -162,7 +162,7 @@ naive-ollama/
 ├── alpha_expression_miner.py      # Alpha表达式挖掘
 ├── improved_alpha_submitter.py    # Alpha提交到WorldQuant
 ├── template_grid_miner.py         # 模板网格挖掘器
-├── web_dashboard.py               # Flask Web监控界面
+├── Web仪表盘.py                   # Flask Web监控界面
 ├── model_fleet_manager.py         # 模型舰队管理器
 ├── vram_monitor.py                # VRAM监控
 ├── templates/                     # Web界面模板
@@ -171,7 +171,7 @@ naive-ollama/
 ├── requirements.txt               # Python依赖
 ├── model_fleet_state.json         # 模型舰队状态
 ├── hopeful_alphas.json            # 有希望的Alpha列表
-└── submission_log.json            # 提交日志
+└── 提交日志.json                  # 提交日志文件
 ```
 
 ## 🔄 工作流程

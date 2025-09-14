@@ -20,7 +20,7 @@ class AlphaDashboard:
     def __init__(self):
         self.status_file = "dashboard_status.json"
         self.log_file = "alpha_orchestrator.log"
-        self.submission_log_file = "submission_log.json"
+        self.提交日志文件 = "提交日志.json"
         self.results_dir = "results"
         self.logs_dir = "logs"
 
@@ -138,8 +138,8 @@ class AlphaDashboard:
                             break
 
                 # Check submission schedule
-                if os.path.exists(self.submission_log_file):
-                    with open(self.submission_log_file, "r") as f:
+                if os.path.exists(self.提交日志文件):
+                    with open(self.提交日志文件, "r") as f:
                         data = json.load(f)
                         last_submission = data.get("last_submission_date")
                         if last_submission:
