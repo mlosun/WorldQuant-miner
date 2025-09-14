@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 def auth_session(credentials_path: str) -> requests.Session:
-    with open(credentials_path, 'r', encoding='utf-8') as f:
+    with open(credentials_path, "r", encoding="utf-8") as f:
         u, p = json.load(f)
     s = requests.Session()
     s.auth = HTTPBasicAuth(u, p)
-    r = s.post('https://api.worldquantbrain.com/authentication')
+    r = s.post("https://api.worldquantbrain.com/authentication")
     if r.status_code != 201:
         raise RuntimeError(f"Auth failed: {r.text}")
     return s
@@ -23,28 +23,28 @@ def auth_session(credentials_path: str) -> requests.Session:
 
 def submit_sim(s: requests.Session, expression: str) -> dict:
     data = {
-        'type': 'REGULAR',
-        'settings': {
-            'instrumentType': 'EQUITY',
-            'region': 'USA',
-            'universe': 'TOP3000',
-            'delay': 1,
-            'decay': 0,
-            'neutralization': 'INDUSTRY',
-            'truncation': 0.01,
-            'pasteurization': 'ON',
-            'unitHandling': 'VERIFY',
-            'nanHandling': 'OFF',
-            'language': 'FASTEXPR',
-            'visualization': False,
+        "type": "REGULAR",
+        "settings": {
+            "instrumentType": "EQUITY",
+            "region": "USA",
+            "universe": "TOP3000",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "INDUSTRY",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "OFF",
+            "language": "FASTEXPR",
+            "visualization": False,
         },
-        'regular': expression
+        "regular": expression,
     }
-    r = s.post('https://api.worldquantbrain.com/simulations', json=data)
+    r = s.post("https://api.worldquantbrain.com/simulations", json=data)
     if r.status_code != 201:
-        return {'status': 'error', 'message': r.text}
-    progress_url = r.headers.get('location')
-    return {'status': 'success', 'progress_url': progress_url}
+        return {"status": "error", "message": r.text}
+    progress_url = r.headers.get("location")
+    return {"status": "success", "progress_url": progress_url}
 
 
 def monitor_sim(s: requests.Session, progress_url: str, timeout_s: int = 3600) -> dict:
@@ -55,21 +55,21 @@ def monitor_sim(s: requests.Session, progress_url: str, timeout_s: int = 3600) -
             time.sleep(5)
             continue
         if r.status_code != 200:
-            return {'status': 'error', 'message': r.text}
+            return {"status": "error", "message": r.text}
         data = r.json()
-        st = data.get('status')
-        if st == 'COMPLETE':
-            alpha_id = data.get('alpha')
+        st = data.get("status")
+        if st == "COMPLETE":
+            alpha_id = data.get("alpha")
             if not alpha_id:
-                return {'status': 'error', 'message': 'missing alpha id'}
-            a = s.get(f'https://api.worldquantbrain.com/alphas/{alpha_id}')
+                return {"status": "error", "message": "missing alpha id"}
+            a = s.get(f"https://api.worldquantbrain.com/alphas/{alpha_id}")
             if a.status_code != 200:
-                return {'status': 'error', 'message': a.text}
-            return {'status': 'complete', 'alpha': a.json()}
-        if st == 'ERROR':
-            return {'status': 'error', 'message': 'simulation error'}
+                return {"status": "error", "message": a.text}
+            return {"status": "complete", "alpha": a.json()}
+        if st == "ERROR":
+            return {"status": "error", "message": "simulation error"}
         time.sleep(5)
-    return {'status': 'timeout'}
+    return {"status": "timeout"}
 
 
 def generate_templates() -> List[str]:
@@ -83,76 +83,90 @@ def generate_templates() -> List[str]:
     for w1 in wins:
         for w2 in wins:
             if w2 > w1:
-                exprs.append(f'group_neutralize(zscore(ts_mean(returns, {w1}) - ts_mean(returns, {w2})), "sector")')
+                exprs.append(
+                    f'group_neutralize(zscore(ts_mean(returns, {w1}) - ts_mean(returns, {w2})), "sector")'
+                )
     # group_neutralize(zscore(ts_rank(ts_mean(returns,W), R)), "sector")
     for w in wins:
         for r in ranks:
-            exprs.append(f'group_neutralize(zscore(ts_rank(ts_mean(returns, {w}), {r})), "sector")')
+            exprs.append(
+                f'group_neutralize(zscore(ts_rank(ts_mean(returns, {w}), {r})), "sector")'
+            )
     # group_neutralize(zscore(rank(divide(revenue, assets)))), "sector")
     exprs.append('group_neutralize(zscore(rank(divide(revenue, assets))), "sector")')
     return exprs
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Template+Grid Alpha Miner')
-    parser.add_argument('--credentials', type=str, default='./credential.txt')
-    parser.add_argument('--max', type=int, default=30, help='Max expressions to test')
-    parser.add_argument('--timeout', type=int, default=3600, help='Per-simulation timeout (s)')
-    parser.add_argument('--log-level', type=str, default='INFO', choices=['DEBUG','INFO','WARNING','ERROR'])
+    parser = argparse.ArgumentParser(description="Template+Grid Alpha Miner")
+    parser.add_argument("--credentials", type=str, default="./credential.txt")
+    parser.add_argument("--max", type=int, default=30, help="Max expressions to test")
+    parser.add_argument(
+        "--timeout", type=int, default=3600, help="Per-simulation timeout (s)"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+    )
     args = parser.parse_args()
 
-    logging.basicConfig(level=getattr(logging, args.log_level), format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
 
     s = auth_session(args.credentials)
-    exprs = generate_templates()[:args.max]
+    exprs = generate_templates()[: args.max]
     results = []
 
     for i, expr in enumerate(exprs, 1):
-        logger.info(f'Testing {i}/{len(exprs)}: {expr}')
+        logger.info(f"Testing {i}/{len(exprs)}: {expr}")
         sub = submit_sim(s, expr)
-        if sub.get('status') != 'success':
+        if sub.get("status") != "success":
             logger.warning(f"Submit error: {sub.get('message')}")
             continue
-        mon = monitor_sim(s, sub['progress_url'], timeout_s=args.timeout)
-        if mon.get('status') == 'complete':
-            alpha = mon['alpha']
-            is_data = alpha.get('is', {})
-            fitness = is_data.get('fitness')
-            sharpe = is_data.get('sharpe')
+        mon = monitor_sim(s, sub["progress_url"], timeout_s=args.timeout)
+        if mon.get("status") == "complete":
+            alpha = mon["alpha"]
+            is_data = alpha.get("is", {})
+            fitness = is_data.get("fitness")
+            sharpe = is_data.get("sharpe")
             logger.info(f"Completed. Fitness={fitness}, Sharpe={sharpe}")
             # Append to hopeful if strong
             if fitness is not None and fitness > 1:
                 try:
                     # Log into hopeful file
                     hopeful = []
-                    if os.path.exists('hopeful_alphas.json'):
-                        hopeful = json.load(open('hopeful_alphas.json','r'))
-                    hopeful.append({
-                        'expression': expr,
-                        'timestamp': int(time.time()),
-                        'alpha_id': alpha.get('id','unknown'),
-                        'fitness': fitness,
-                        'sharpe': sharpe,
-                        'turnover': is_data.get('turnover'),
-                        'returns': is_data.get('returns'),
-                        'grade': alpha.get('grade','UNKNOWN'),
-                        'checks': is_data.get('checks', [])
-                    })
-                    json.dump(hopeful, open('hopeful_alphas.json','w'), indent=2)
+                    if os.path.exists("hopeful_alphas.json"):
+                        hopeful = json.load(open("hopeful_alphas.json", "r"))
+                    hopeful.append(
+                        {
+                            "expression": expr,
+                            "timestamp": int(time.time()),
+                            "alpha_id": alpha.get("id", "unknown"),
+                            "fitness": fitness,
+                            "sharpe": sharpe,
+                            "turnover": is_data.get("turnover"),
+                            "returns": is_data.get("returns"),
+                            "grade": alpha.get("grade", "UNKNOWN"),
+                            "checks": is_data.get("checks", []),
+                        }
+                    )
+                    json.dump(hopeful, open("hopeful_alphas.json", "w"), indent=2)
                 except Exception as e:
-                    logger.error(f'Failed to write hopeful_alphas.json: {e}')
-        elif mon.get('status') == 'timeout':
-            logger.warning('Monitoring timeout')
+                    logger.error(f"Failed to write hopeful_alphas.json: {e}")
+        elif mon.get("status") == "timeout":
+            logger.warning("Monitoring timeout")
         else:
             logger.warning(f"Simulation failed: {mon.get('message')}")
-        results.append({'expression': expr, 'result': mon})
+        results.append({"expression": expr, "result": mon})
 
-    with open('template_grid_results.json','w') as f:
+    with open("template_grid_results.json", "w") as f:
         json.dump(results, f, indent=2)
-    logger.info('Template+Grid mining complete')
+    logger.info("Template+Grid mining complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
-
