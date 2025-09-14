@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -205,40 +205,40 @@
         </div>
         
         <div class="controls">
-            <h3>Manual Controls</h3>
+            <h3>手动控制</h3>
             <div class="button-group">
-                <button class="btn btn-primary" onclick="refreshStatus()">Refresh Status</button>
-                <button class="btn btn-success" onclick="triggerMining()">Trigger Mining</button>
-                <button class="btn btn-warning" onclick="triggerSubmission()">Trigger Submission</button>
-                <button class="btn btn-primary" onclick="triggerAlphaGeneration()">Generate Alpha</button>
-                <a href="http://localhost:3000" target="_blank" class="btn btn-primary">Ollama WebUI</a>
+                <button class="btn btn-primary" onclick="refreshStatus()">刷新状态</button>
+                <button class="btn btn-success" onclick="triggerMining()">触发挖掘</button>
+                <button class="btn btn-warning" onclick="triggerSubmission()">触发提交</button>
+                <button class="btn btn-primary" onclick="triggerAlphaGeneration()">生成Alpha</button>
+                <a href="http://localhost:3000" target="_blank" class="btn btn-primary">Ollama 网页界面</a>
                 <a href="http://localhost:11434/api/tags" target="_blank" class="btn btn-primary">Ollama API</a>
             </div>
         </div>
         
         <div class="logs-section">
-            <h3>Recent Activity</h3>
+            <h3>最近活动</h3>
             <div id="activityContainer">
                 <!-- Activity items will be populated here -->
             </div>
         </div>
         
         <div class="logs-section">
-            <h3>Alpha Generator Logs</h3>
+            <h3>Alpha 生成器日志</h3>
             <div class="logs-container" id="alphaLogsContainer">
                 <!-- Alpha generator logs will be populated here -->
             </div>
         </div>
         
         <div class="logs-section">
-            <h3>All System Logs</h3>
+            <h3>所有系统日志</h3>
             <div class="logs-container" id="logsContainer">
                 <!-- All logs will be populated here -->
             </div>
         </div>
         
         <div class="refresh-info">
-            Auto-refresh every 30 seconds | Last updated: <span id="lastUpdate">Never</span>
+            每30秒自动刷新 | 最后更新时间: <span id="lastUpdate">从未更新</span>
         </div>
     </div>
 
@@ -264,7 +264,7 @@
         }
         
         function formatTimestamp(timestamp) {
-            if (!timestamp) return 'N/A';
+            if (!timestamp) return '无';
             const date = new Date(timestamp);
             return date.toLocaleString();
         }
@@ -285,25 +285,25 @@
             const gpu = statusData.gpu || {};
             grid.innerHTML += `
                 <div class="status-card">
-                    <h3><span class="status-indicator ${updateStatusIndicator(gpu.status)}"></span>GPU Status</h3>
+                    <h3><span class="status-indicator ${updateStatusIndicator(gpu.status)}"></span>GPU 状态</h3>
                     <div class="metric">
-                        <span class="metric-label">Status:</span>
-                        <span class="metric-value">${gpu.status || 'Unknown'}</span>
+                        <span class="metric-label">状态:</span>
+                        <span class="metric-value">${gpu.status || '未知'}</span>
                     </div>
                     ${gpu.name ? `<div class="metric">
                         <span class="metric-label">GPU:</span>
                         <span class="metric-value">${gpu.name}</span>
                     </div>` : ''}
                     ${gpu.memory_used_mb ? `<div class="metric">
-                        <span class="metric-label">Memory:</span>
+                        <span class="metric-label">内存:</span>
                         <span class="metric-value">${gpu.memory_used_mb}MB / ${gpu.memory_total_mb}MB (${gpu.memory_percent}%)</span>
                     </div>` : ''}
                     ${gpu.utilization_percent ? `<div class="metric">
-                        <span class="metric-label">Utilization:</span>
+                        <span class="metric-label">使用率:</span>
                         <span class="metric-value">${gpu.utilization_percent}%</span>
                     </div>` : ''}
                     ${gpu.temperature_c ? `<div class="metric">
-                        <span class="metric-label">Temperature:</span>
+                        <span class="metric-label">温度:</span>
                         <span class="metric-value">${gpu.temperature_c}°C</span>
                     </div>` : ''}
                 </div>
@@ -313,18 +313,18 @@
             const ollama = statusData.ollama || {};
             grid.innerHTML += `
                 <div class="status-card">
-                    <h3><span class="status-indicator ${updateStatusIndicator(ollama.status)}"></span>Ollama Status</h3>
+                    <h3><span class="status-indicator ${updateStatusIndicator(ollama.status)}"></span>Ollama 状态</h3>
                     <div class="metric">
-                        <span class="metric-label">Status:</span>
-                        <span class="metric-value">${ollama.status || 'Unknown'}</span>
+                        <span class="metric-label">状态:</span>
+                        <span class="metric-value">${ollama.status || '未知'}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Models:</span>
+                        <span class="metric-label">模型数:</span>
                         <span class="metric-value">${ollama.model_count || 0}</span>
                     </div>
                     ${ollama.models ? `<div class="metric">
-                        <span class="metric-label">Loaded:</span>
-                        <span class="metric-value">${ollama.models.join(', ') || 'None'}</span>
+                        <span class="metric-label">已加载:</span>
+                        <span class="metric-value">${ollama.models.join(', ') || '无'}</span>
                     </div>` : ''}
                 </div>
             `;
@@ -333,21 +333,21 @@
             const orchestrator = statusData.orchestrator || {};
             grid.innerHTML += `
                 <div class="status-card">
-                    <h3><span class="status-indicator ${updateStatusIndicator(orchestrator.status)}"></span>Orchestrator Status</h3>
+                    <h3><span class="status-indicator ${updateStatusIndicator(orchestrator.status)}"></span>编排器状态</h3>
                     <div class="metric">
-                        <span class="metric-label">Status:</span>
-                        <span class="metric-value">${orchestrator.status || 'Unknown'}</span>
+                        <span class="metric-label">状态:</span>
+                        <span class="metric-value">${orchestrator.status || '未知'}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Mode:</span>
-                        <span class="metric-value">${orchestrator.current_mode || 'Unknown'}</span>
+                        <span class="metric-label">模式:</span>
+                        <span class="metric-value">${orchestrator.current_mode || '未知'}</span>
                     </div>
                     ${orchestrator.next_mining ? `<div class="metric">
-                        <span class="metric-label">Next Mining:</span>
+                        <span class="metric-label">下次挖掘:</span>
                         <span class="metric-value">${formatTimestamp(orchestrator.next_mining)}</span>
                     </div>` : ''}
                     ${orchestrator.next_submission ? `<div class="metric">
-                        <span class="metric-label">Next Submission:</span>
+                        <span class="metric-label">下次提交:</span>
                         <span class="metric-value">${formatTimestamp(orchestrator.next_submission)}</span>
                     </div>` : ''}
                 </div>
@@ -357,14 +357,14 @@
             const worldquant = statusData.worldquant || {};
             grid.innerHTML += `
                 <div class="status-card">
-                    <h3><span class="status-indicator ${updateStatusIndicator(worldquant.status)}"></span>WorldQuant Brain</h3>
+                    <h3><span class="status-indicator ${updateStatusIndicator(worldquant.status)}"></span>WorldQuant 大脑</h3>
                     <div class="metric">
-                        <span class="metric-label">Status:</span>
-                        <span class="metric-value">${worldquant.status || 'Unknown'}</span>
+                        <span class="metric-label">状态:</span>
+                        <span class="metric-value">${worldquant.status || '未知'}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Message:</span>
-                        <span class="metric-value">${worldquant.message || 'N/A'}</span>
+                        <span class="metric-label">消息:</span>
+                        <span class="metric-value">${worldquant.message || '无'}</span>
                     </div>
                 </div>
             `;
@@ -373,21 +373,21 @@
             const stats = statusData.statistics || {};
             grid.innerHTML += `
                 <div class="status-card">
-                    <h3><span class="status-indicator status-active"></span>Statistics</h3>
+                    <h3><span class="status-indicator status-active"></span>统计数据</h3>
                     <div class="metric">
-                        <span class="metric-label">Total Generated:</span>
+                        <span class="metric-label">总生成数:</span>
                         <span class="metric-value">${stats.total_alphas_generated || 0}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Successful:</span>
+                        <span class="metric-label">成功数:</span>
                         <span class="metric-value">${stats.successful_alphas || 0}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Last 24h Generated:</span>
+                        <span class="metric-label">过去24小时生成:</span>
                         <span class="metric-value">${stats.last_24h_generated || 0}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Last 24h Successful:</span>
+                        <span class="metric-label">过去24小时成功:</span>
                         <span class="metric-value">${stats.last_24h_successful || 0}</span>
                     </div>
                 </div>
@@ -416,7 +416,7 @@
                 const logsContainer = document.getElementById('logsContainer');
                 logsContainer.textContent = data.logs.join('\n');
             } catch (error) {
-                console.error('Error loading logs:', error);
+                console.error('加载日志出错:', error);
             }
         }
         
@@ -427,7 +427,7 @@
                 const alphaLogsContainer = document.getElementById('alphaLogsContainer');
                 alphaLogsContainer.textContent = data.logs.join('\n');
             } catch (error) {
-                console.error('Error loading alpha logs:', error);
+                console.error('加载Alpha日志出错:', error);
             }
         }
         
@@ -443,7 +443,7 @@
                 
                 document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
             } catch (error) {
-                console.error('Error refreshing status:', error);
+                console.error('刷新状态出错:', error);
             }
         }
         
@@ -451,10 +451,10 @@
             try {
                 const response = await fetch('/api/trigger_mining', { method: 'POST' });
                 const result = await response.json();
-                alert(result.success ? 'Mining triggered successfully!' : 'Error triggering mining: ' + result.error);
+                alert(result.success ? '挖掘触发成功！' : '触发挖掘出错: ' + result.error);
                 refreshStatus();
             } catch (error) {
-                alert('Error triggering mining: ' + error);
+                alert('触发挖掘出错: ' + error);
             }
         }
         
@@ -462,10 +462,10 @@
             try {
                 const response = await fetch('/api/trigger_submission', { method: 'POST' });
                 const result = await response.json();
-                alert(result.success ? 'Submission triggered successfully!' : 'Error triggering submission: ' + result.error);
+                alert(result.success ? '提交触发成功！' : '触发提交出错: ' + result.error);
                 refreshStatus();
             } catch (error) {
-                alert('Error triggering submission: ' + error);
+                alert('触发提交出错: ' + error);
             }
         }
         
@@ -473,17 +473,17 @@
             try {
                 const response = await fetch('/api/trigger_alpha_generation', { method: 'POST' });
                 const result = await response.json();
-                alert(result.success ? 'Alpha generation triggered successfully!' : 'Error triggering alpha generation: ' + result.error);
+                alert(result.success ? 'Alpha生成触发成功！' : '触发Alpha生成出错: ' + result.error);
                 refreshStatus();
             } catch (error) {
-                alert('Error triggering alpha generation: ' + error);
+                alert('触发Alpha生成出错: ' + error);
             }
         }
         
-        // Initial load
+        // 初始加载
         refreshStatus();
         
-        // Auto-refresh every 30 seconds
+        // 每30秒自动刷新
         setInterval(refreshStatus, 30000);
     </script>
 </body>
