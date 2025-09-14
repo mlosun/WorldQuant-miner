@@ -192,10 +192,10 @@ class ModelFleetManager:
         )
 
     def handle_vram_error(self) -> bool:
-        """Handle VRAM error by downgrading to a smaller model, but never switch away from pinned small model."""
+        """处理 VRAM 错误，降级到更小的模型，但不会从固定的较小模型切换走"""
         self.vram_error_count += 1
         logger.warning(
-            f"VRAM error detected! Count: {self.vram_error_count}/{self.max_vram_errors}"
+            f"检测到 VRAM 错误! 计数: {self.vram_error_count}/{self.max_vram_errors}"
         )
 
         # If current model is the preferred small model, do not auto-downgrade to other tags
@@ -211,12 +211,12 @@ class ModelFleetManager:
         return False
 
     def downgrade_model(self) -> bool:
-        """Downgrade to the next available smaller model in the fleet."""
-        # Find the next available model that's smaller than current
+        """降级到模型队列中下一个可用的较小模型"""
+        # 找到比当前模型小的下一个可用模型
         current_model = self.get_current_model()
         available_models = self.get_available_models()
 
-        # Look for a smaller available model
+        # 寻找更小的可用模型
         for i in range(self.current_model_index + 1, len(self.model_fleet)):
             candidate_model = self.model_fleet[i]
             if candidate_model.name in available_models:
@@ -225,53 +225,53 @@ class ModelFleetManager:
                 new_model = self.get_current_model()
 
                 logger.warning(
-                    f"Downgrading model: {old_model.name} -> {new_model.name}"
+                    f"降级模型: {old_model.name} -> {new_model.name}"
                 )
 
-                # Reset VRAM error count
+                # 重置 VRAM 错误计数
                 self.vram_error_count = 0
 
-                # Save state
+                # 保存状态
                 self.save_state()
 
-                # Update the alpha generator configuration
+                # 更新 alpha 生成器配置
                 self.update_alpha_generator_config(new_model.name)
 
-                logger.info(f"Successfully downgraded to {new_model.name}")
+                logger.info(f"成功降级到 {new_model.name}")
                 return True
 
-        # If no smaller available models found, trigger application reset
-        logger.error("No smaller available models found for downgrade!")
+        # 如果没有找到更小的可用模型，触发应用重置
+        logger.error("未找到更小的可用模型用于降级！")
         return self.trigger_application_reset()
 
     def trigger_application_reset(self) -> bool:
-        """Trigger a complete application reset when VRAM issues persist with smallest model."""
+        """当 VRAM 问题持续存在且使用最小模型时，触发完整的应用重置"""
         try:
-            logger.warning("Triggering application reset due to persistent VRAM issues")
+            logger.warning("由于持续的 VRAM 问题，正在触发应用重置")
 
-            # Reset to the preferred small model (index 0 after fleet reordering)
+            # 重置到首选的小模型（队列重新排序后的索引 0）
             self.current_model_index = 0
             self.vram_error_count = 0
             self.save_state()
 
-            # Update configuration to use preferred model
+            # 更新配置以使用首选模型
             self.update_alpha_generator_config(self.get_current_model().name)
 
-            logger.info("Application reset completed - pinned to preferred small model")
+            logger.info("应用重置完成 - 已固定到首选小模型")
             return True
 
         except Exception as e:
-            logger.error(f"Error during application reset: {e}")
+            logger.error(f"应用重置过程中出错: {e}")
             return False
 
     def update_alpha_generator_config(self, model_name: str):
-        """Update the alpha generator configuration to use the new model."""
+        """更新 alpha 生成器配置以使用新模型"""
         try:
-            # Update the default model in alpha_generator_ollama.py
+            # 更新 alpha_generator_ollama.py 中的默认模型
             with open("alpha_generator_ollama.py", "r") as f:
                 content = f.read()
 
-            # Replace the default model
+            # 替换默认模型
             content = content.replace(
                 "default='llama3.2:8b'", f"default='{model_name}'"
             )
@@ -283,12 +283,12 @@ class ModelFleetManager:
             with open("alpha_generator_ollama.py", "w") as f:
                 f.write(content)
 
-            logger.info(f"Updated alpha generator config to use {model_name}")
+            logger.info(f"已更新 alpha 生成器配置以使用 {model_name}")
         except Exception as e:
-            logger.error(f"Error updating alpha generator config: {e}")
+            logger.error(f"更新 alpha 生成器配置时出错: {e}")
 
     def get_fleet_status(self) -> Dict:
-        """Get the current status of the model fleet."""
+        """获取模型队列的当前状态"""
         current_model = self.get_current_model()
         available_models = self.get_available_models()
 
@@ -307,8 +307,8 @@ class ModelFleetManager:
         }
 
     def reset_to_largest_model(self):
-        """Reset to the largest available model in the fleet."""
-        # Find the largest available model
+        """重置到模型队列中最大的可用模型"""
+        # 找到最大的可用模型
         available_models = self.get_available_models()
 
         for i, model_info in enumerate(self.model_fleet):
@@ -316,17 +316,17 @@ class ModelFleetManager:
                 self.current_model_index = i
                 self.vram_error_count = 0
                 self.save_state()
-                logger.info(f"Reset to largest available model: {model_info.name}")
+                logger.info(f"重置到最大的可用模型: {model_info.name}")
                 return self.update_alpha_generator_config(model_info.name)
 
-        # If no preferred models are available, use the first available model
+        # 如果没有首选模型可用，使用第一个可用模型
         if available_models:
             logger.warning(
-                f"No preferred models available, using: {available_models[0]}"
+                f"没有首选模型可用，使用: {available_models[0]}"
             )
             return True
 
-        logger.error("No models available for reset")
+        logger.error("没有可用于重置的模型")
         return False
 
 
@@ -402,9 +402,9 @@ class AlphaOrchestrator:
             json.dump(data, f, indent=2)
 
     def start_vram_monitoring(self):
-        """Start VRAM monitoring in a separate thread."""
+        """启动 VRAM 监控线程"""
         if self.vram_monitoring_active:
-            logger.info("VRAM monitoring already active")
+            logger.info("VRAM 监控已启动")
             return
 
         self.vram_monitoring_active = True
@@ -412,43 +412,43 @@ class AlphaOrchestrator:
             target=self._vram_monitor_loop, daemon=True
         )
         self.vram_monitor_thread.start()
-        logger.info("Started VRAM monitoring thread")
+        logger.info("已启动 VRAM 监控线程")
 
     def stop_vram_monitoring(self):
-        """Stop VRAM monitoring."""
+        """停止 VRAM 监控"""
         self.vram_monitoring_active = False
         if self.vram_monitor_thread:
             self.vram_monitor_thread.join(timeout=5)
-        logger.info("Stopped VRAM monitoring")
+        logger.info("已停止 VRAM 监控")
 
     def _vram_monitor_loop(self):
-        """VRAM monitoring loop that checks for errors and handles model downgrading."""
-        logger.info("VRAM monitoring loop started")
+        """VRAM 监控循环，检查错误并处理模型降级"""
+        logger.info("VRAM 监控循环已启动")
 
         while self.vram_monitoring_active and self.running:
             try:
-                # Check for VRAM errors in recent logs
+                # 检查最近的日志中的 VRAM 错误
                 if self._check_for_vram_errors():
-                    logger.warning("VRAM error detected in monitoring loop")
+                    logger.warning("在监控循环中检测到 VRAM 错误")
                     if self.model_fleet_manager.handle_vram_error():
-                        logger.info("Model fleet action taken due to VRAM issues")
-                        # Restart the alpha generator with new model configuration
+                        logger.info("由于 VRAM 问题，已采取模型队列操作")
+                        # 使用新模型配置重新启动 alpha 生成器
                         self._restart_alpha_generator()
 
-                time.sleep(30)  # Check every 30 seconds
+                time.sleep(30)  # 每 30 秒检查一次
 
             except Exception as e:
-                logger.error(f"Error in VRAM monitoring loop: {e}")
-                time.sleep(60)  # Wait longer on error
+                logger.error(f"VRAM 监控循环中出错: {e}")
+                time.sleep(60)  # 出错时等待更长时间
 
-        logger.info("VRAM monitoring loop stopped")
+        logger.info("VRAM 监控循环已停止")
 
     def _check_for_vram_errors(self) -> bool:
-        """Check recent logs for VRAM errors."""
+        """检查最近的日志中的 VRAM 错误"""
         try:
-            # Check Ollama logs and application logs for VRAM errors
+            # 检查 Ollama 日志和应用日志中的 VRAM 错误
             log_files_to_check = [
-                "/app/logs/ollama.log",  # Ollama logs redirected to file
+                "/app/logs/ollama.log",  # Ollama 日志重定向到文件
                 "alpha_orchestrator.log",
                 "alpha_generator_ollama.log",
             ]
@@ -456,7 +456,7 @@ class AlphaOrchestrator:
             for log_file in log_files_to_check:
                 try:
                     if os.path.exists(log_file):
-                        # Read last 50 lines of log file
+                        # 读取日志文件的最后 50 行
                         with open(log_file, "r") as f:
                             lines = f.readlines()
                             recent_lines = lines[-50:] if len(lines) > 50 else lines
@@ -464,45 +464,45 @@ class AlphaOrchestrator:
                             for line in recent_lines:
                                 if self.model_fleet_manager.detect_vram_error(line):
                                     logger.warning(
-                                        f"VRAM error found in {log_file}: {line.strip()}"
+                                        f"在 {log_file} 中发现 VRAM 错误: {line.strip()}"
                                     )
                                     return True
                 except Exception as e:
-                    # Skip files that can't be read
+                    # 跳过无法读取的文件
                     continue
 
             return False
         except Exception as e:
-            logger.error(f"Error checking for VRAM errors: {e}")
+            logger.error(f"检查 VRAM 错误时出错: {e}")
             return False
 
     def _restart_alpha_generator(self):
-        """Restart the alpha generator with the new model."""
+        """使用新模型重新启动 alpha 生成器"""
         try:
-            logger.info("Restarting alpha generator with new model")
+            logger.info("正在使用新模型重新启动 alpha 生成器")
 
-            # Stop current generator process if running
+            # 如果当前生成器进程正在运行，则停止
             if self.generator_process and self.generator_process.poll() is None:
                 self.generator_process.terminate()
                 self.generator_process.wait(timeout=30)
 
-            # Start new generator process in continuous mode
+            # 以连续模式启动新的生成器进程
             self.start_alpha_generator_continuous(batch_size=3, sleep_time=30)
 
         except Exception as e:
-            logger.error(f"Error restarting alpha generator: {e}")
+            logger.error(f"重新启动 alpha 生成器时出错: {e}")
 
     def start_restart_monitoring(self):
-        """Start restart monitoring in a separate thread."""
+        """启动重启监控线程"""
         if not self.restart_thread or not self.restart_thread.is_alive():
             self.restart_thread = threading.Thread(
                 target=self._restart_monitor_loop, daemon=True
             )
             self.restart_thread.start()
-            logger.info("Restart monitoring started (30-minute intervals)")
+            logger.info("已启动重启监控 (30 分钟间隔)")
 
     def _restart_monitor_loop(self):
-        """Monitor and restart processes every 30 minutes."""
+        """监控并每 30 分钟重启进程"""
         while self.running:
             try:
                 current_time = time.time()
@@ -510,59 +510,59 @@ class AlphaOrchestrator:
 
                 if time_since_last_restart >= self.restart_interval:
                     logger.info(
-                        "30 minutes elapsed since last restart, initiating restart..."
+                        "距离上次重启已过去 30 分钟，正在启动重启..."
                     )
                     self.restart_all_processes()
                 else:
                     remaining_time = self.restart_interval - time_since_last_restart
-                    logger.debug(f"⏰ Next restart in {remaining_time/60:.1f} minutes")
+                    logger.debug(f"⏰ 下次重启将在 {remaining_time/60:.1f} 分钟后")
 
-                # Check every minute
+                # 每分钟检查一次
                 time.sleep(60)
 
             except Exception as e:
-                logger.error(f"Error in restart monitoring: {e}")
+                logger.error(f"重启监控中出错: {e}")
                 time.sleep(60)
 
     def get_model_fleet_status(self) -> Dict:
-        """Get the current status of the model fleet."""
+        """获取模型队列的当前状态"""
         return self.model_fleet_manager.get_fleet_status()
 
     def reset_model_fleet(self):
-        """Reset the model fleet to the largest model."""
+        """将模型队列重置为最大的模型"""
         return self.model_fleet_manager.reset_to_largest_model()
 
     def force_model_downgrade(self):
-        """Force downgrade to the next smaller model."""
+        """强制降级到下一个更小的模型"""
         return self.model_fleet_manager.downgrade_model()
 
     def force_application_reset(self):
-        """Force a complete application reset."""
-        logger.warning("Forcing application reset")
+        """强制完整的应用重置"""
+        logger.warning("正在强制应用重置")
         return self.model_fleet_manager.trigger_application_reset()
 
     def can_submit_today(self) -> bool:
-        """Check if we can submit alphas today (only once per day)."""
+        """检查今天是否可以提交 alpha（每天仅一次）"""
         today = datetime.now().date().isoformat()
 
         if self.last_submission_date == today:
-            logger.info(f"Already submitted today ({today}). Skipping submission.")
+            logger.info(f"今天已提交 ({today})。跳过提交。")
             return False
 
         logger.info(
-            f"Can submit today. Last submission was: {self.last_submission_date}"
+            f"今天可以提交。上次提交时间: {self.last_submission_date}"
         )
         return True
 
     def run_alpha_expression_miner(
         self, promising_alpha_file: str = "hopeful_alphas.json"
     ):
-        """Run alpha expression miner on promising alphas."""
-        logger.info("Starting alpha expression miner on promising alphas...")
+        """对有潜力的 alpha 运行 alpha 表达式挖掘器"""
+        logger.info("正在对有潜力的 alpha 启动 alpha 表达式挖掘器...")
 
         if not os.path.exists(promising_alpha_file):
             logger.warning(
-                f"Promising alphas file {promising_alpha_file} not found. Skipping mining."
+                f"未找到有潜力的 alpha 文件 {promising_alpha_file}。跳过挖掘。"
             )
             return
 
@@ -571,23 +571,23 @@ class AlphaOrchestrator:
                 promising_alphas = json.load(f)
 
             if not promising_alphas:
-                logger.info("No promising alphas found. Skipping mining.")
+                logger.info("未找到有潜力的 alpha。跳过挖掘。")
                 return
 
-            logger.info(f"Found {len(promising_alphas)} promising alphas to mine")
+            logger.info(f"找到 {len(promising_alphas)} 个有潜力的 alpha 用于挖掘")
 
-            # Run alpha expression miner for each promising alpha
-            # Note: The miner will automatically remove successfully mined alphas from hopeful_alphas.json
+            # 为每个有潜力的 alpha 运行 alpha 表达式挖掘器
+            # 注意：挖掘器会自动从 hopeful_alphas.json 中移除成功挖掘的 alpha
             for i, alpha_data in enumerate(promising_alphas, 1):
                 expression = alpha_data.get("expression", "")
                 if not expression:
                     continue
 
                 logger.info(
-                    f"Mining alpha {i}/{len(promising_alphas)}: {expression[:100]}..."
+                    f"正在挖掘 alpha {i}/{len(promising_alphas)}: {expression[:100]}..."
                 )
 
-                # Run the alpha expression miner as a subprocess
+                # 以子进程运行 alpha 表达式挖掘器
                 try:
                     result = subprocess.run(
                         [
@@ -595,7 +595,7 @@ class AlphaOrchestrator:
                             "alpha_expression_miner.py",
                             "--expression",
                             expression,
-                            "--auto-mode",  # Run in automated mode
+                            "--auto-mode",  # 以自动化模式运行
                             "--output-file",
                             f"mining_results_{i}.json",
                         ],
@@ -622,17 +622,17 @@ class AlphaOrchestrator:
             logger.error(f"Error running alpha expression miner: {e}")
 
     def run_alpha_submitter(self, batch_size: int = 5):
-        """Run alpha submitter with daily rate limiting."""
-        logger.info("Starting alpha submitter...")
+        """运行 alpha 提交器，每日限速"""
+        logger.info("正在启动 alpha 提交器...")
 
         if not self.can_submit_today():
             return
 
         try:
-            # Prefer improved submitter with credentials
+            # 优先使用带有凭证的改进提交器
             submitter_script = "improved_alpha_submitter.py"
             if not os.path.exists(submitter_script):
-                logger.error(f"Submitter script not found: {submitter_script}")
+                logger.error(f"未找到提交器脚本: {submitter_script}")
                 return
 
             result = subprocess.run(
@@ -643,7 +643,7 @@ class AlphaOrchestrator:
                     self.credentials_path,
                     "--batch-size",
                     str(batch_size),
-                    "--auto-mode",  # single run
+                    "--auto-mode",  # 单次运行
                 ],
                 capture_output=True,
                 text=True,
@@ -651,28 +651,28 @@ class AlphaOrchestrator:
             )
 
             if result.returncode == 0:
-                logger.info("Successfully completed alpha submission")
-                # Update submission date
+                logger.info("alpha 提交成功完成")
+                # 更新提交日期
                 self.last_submission_date = datetime.now().date().isoformat()
                 self.save_submission_history()
             else:
-                logger.error(f"Alpha submission failed: {result.stderr}")
+                logger.error(f"alpha 提交失败: {result.stderr}")
 
         except subprocess.TimeoutExpired:
-            logger.error("Alpha submission timed out")
+            logger.error("alpha 提交超时")
         except Exception as e:
-            logger.error(f"Error running alpha submitter: {e}")
+            logger.error(f"运行 alpha 提交器时出错: {e}")
 
     def run_alpha_generator(self, batch_size: int = 5, sleep_time: int = 30):
-        """Run the main alpha generator with Ollama."""
-        logger.info("Starting alpha generator with Ollama...")
+        """运行主 alpha 生成器（使用 Ollama）"""
+        logger.info("正在启动 alpha 生成器（使用 Ollama）...")
 
-        # Get current model from fleet manager
+        # 从模型队列管理器获取当前模型
         current_model = self.model_fleet_manager.get_current_model().name
-        logger.info(f"Using model: {current_model}")
+        logger.info(f"使用的模型: {current_model}")
 
         try:
-            # Run the alpha generator as a subprocess
+            # 以子进程运行 alpha 生成器
             result = subprocess.run(
                 [
                     sys.executable,
@@ -691,27 +691,27 @@ class AlphaOrchestrator:
                 capture_output=True,
                 text=True,
                 timeout=3600,
-            )  # 1 hour timeout
+            )  # 1 小时超时
 
             if result.returncode == 0:
-                logger.info("Alpha generator completed successfully")
+                logger.info("alpha 生成器成功完成")
             else:
-                logger.error(f"Alpha generator failed: {result.stderr}")
+                logger.error(f"alpha 生成器失败: {result.stderr}")
 
         except subprocess.TimeoutExpired:
-            logger.error("Alpha generator timed out")
+            logger.error("alpha 生成器超时")
         except Exception as e:
-            logger.error(f"Error running alpha generator: {e}")
+            logger.error(f"运行 alpha 生成器时出错: {e}")
 
     def start_alpha_generator_continuous(
         self, batch_size: int = 3, sleep_time: int = 30
     ):
-        """Start alpha generator in continuous mode as a background process."""
-        logger.info("Starting alpha generator in continuous mode...")
+        """以连续模式启动 alpha 生成器（后台进程）"""
+        logger.info("正在以连续模式启动 alpha 生成器...")
 
-        # Get current model from fleet manager
+        # 从模型队列管理器获取当前模型
         current_model = self.model_fleet_manager.get_current_model().name
-        logger.info(f"Using model: {current_model}")
+        logger.info(f"使用的模型: {current_model}")
 
         try:
             self.generator_process = subprocess.Popen(
@@ -735,180 +735,180 @@ class AlphaOrchestrator:
             )
 
             logger.info(
-                f"Alpha generator started with PID: {self.generator_process.pid}"
+                f"alpha 生成器已启动，PID: {self.generator_process.pid}"
             )
 
         except Exception as e:
             logger.error(f"Error starting alpha generator: {e}")
 
     def start_alpha_expression_miner_continuous(self, check_interval: int = 300):
-        """Start alpha expression miner in continuous mode."""
-        logger.info("Starting alpha expression miner in continuous mode...")
+        """以连续模式启动 alpha 表达式挖掘器"""
+        logger.info("正在以连续模式启动 alpha 表达式挖掘器...")
 
         while self.running:
             try:
-                # Check if hopeful_alphas.json exists and has content
+                # 检查 hopeful_alphas.json 是否存在且有内容
                 if os.path.exists("hopeful_alphas.json"):
                     try:
                         with open("hopeful_alphas.json", "r") as f:
                             alphas = json.load(f)
                             if alphas and len(alphas) > 0:
-                                logger.info(f"Found {len(alphas)} alphas to mine")
+                                logger.info(f"找到 {len(alphas)} 个 alpha 用于挖掘")
                                 self.run_alpha_expression_miner()
                             else:
-                                logger.info("No alphas found in hopeful_alphas.json")
+                                logger.info("未在 hopeful_alphas.json 中找到 alpha")
                     except json.JSONDecodeError:
                         logger.warning(
-                            "hopeful_alphas.json is not valid JSON, waiting for valid data..."
+                            "hopeful_alphas.json 不是有效的 JSON，等待有效数据..."
                         )
                     except Exception as e:
-                        logger.error(f"Error reading hopeful_alphas.json: {e}")
+                        logger.error(f"读取 hopeful_alphas.json 时出错: {e}")
                 else:
                     logger.info(
-                        "hopeful_alphas.json not found yet, waiting for alpha generator to create promising alphas..."
+                        "尚未找到 hopeful_alphas.json，等待 alpha 生成器创建有潜力的 alpha..."
                     )
 
-                # Wait before next check
+                # 等待下一次检查
                 time.sleep(check_interval)
 
             except Exception as e:
-                logger.error(f"Error in continuous miner: {e}")
+                logger.error(f"连续挖掘器中出错: {e}")
                 time.sleep(check_interval)
 
     def restart_all_processes(self):
-        """Restart all running processes to prevent stuck jobs."""
-        logger.info("Restarting all processes to prevent stuck jobs...")
+        """重启所有运行中的进程以防止任务卡住"""
+        logger.info("正在重启所有进程以防止任务卡住...")
 
-        # Stop current processes
+        # 停止当前进程
         self.stop_processes()
 
-        # Wait a moment for processes to terminate
+        # 等待进程终止
         time.sleep(5)
 
-        # Restart processes
+        # 重启进程
         try:
-            # Restart alpha generator
-            logger.info("Restarting alpha generator...")
+            # 重启 alpha 生成器
+            logger.info("正在重启 alpha 生成器...")
             self.start_alpha_generator_continuous(batch_size=3, sleep_time=30)
 
-            # Restart VRAM monitoring
-            logger.info("Restarting VRAM monitoring...")
+            # 重启 VRAM 监控
+            logger.info("正在重启 VRAM 监控...")
             self.start_vram_monitoring()
 
-            logger.info("All processes restarted successfully")
+            logger.info("所有进程已成功重启")
             self.last_restart_time = time.time()
 
         except Exception as e:
             logger.error(f"❌ Error during restart: {e}")
 
     def stop_processes(self):
-        """Stop all running processes."""
-        logger.info("Stopping all processes...")
+        """停止所有运行中的进程"""
+        logger.info("正在停止所有进程...")
         self.running = False
 
-        # Stop restart thread
+        # 停止重启线程
         if self.restart_thread and self.restart_thread.is_alive():
-            logger.info("Stopping restart monitoring thread...")
+            logger.info("正在停止重启监控线程...")
 
-        # Stop VRAM monitoring
+        # 停止 VRAM 监控
         self.stop_vram_monitoring()
 
         if self.generator_process:
-            logger.info("Terminating alpha generator process...")
+            logger.info("正在终止 alpha 生成器进程...")
             self.generator_process.terminate()
             try:
                 self.generator_process.wait(timeout=30)
             except subprocess.TimeoutExpired:
-                logger.warning("Force killing alpha generator process...")
+                logger.warning("正在强制终止 alpha 生成器进程...")
                 self.generator_process.kill()
 
         if self.miner_process:
-            logger.info("Terminating alpha miner process...")
+            logger.info("正在终止 alpha 挖掘器进程...")
             self.miner_process.terminate()
             try:
                 self.miner_process.wait(timeout=30)
             except subprocess.TimeoutExpired:
-                logger.warning("Force killing alpha miner process...")
+                logger.warning("正在强制终止 alpha 挖掘器进程...")
                 self.miner_process.kill()
 
     def daily_workflow(self):
-        """Run the complete daily workflow."""
-        logger.info("Starting daily alpha workflow...")
+        """运行完整的每日工作流"""
+        logger.info("正在启动每日 alpha 工作流...")
 
-        # 1. Run alpha generator for a few hours
-        logger.info("Phase 1: Running alpha generator...")
+        # 1. 运行 alpha 生成器几小时
+        logger.info("阶段 1: 正在运行 alpha 生成器...")
         self.run_alpha_generator(batch_size=3, sleep_time=60)
 
-        # 2. Run alpha expression miner on promising alphas
-        logger.info("Phase 2: Running alpha expression miner...")
+        # 2. 对有潜力的 alpha 运行 alpha 表达式挖掘器
+        logger.info("阶段 2: 正在运行 alpha 表达式挖掘器...")
         self.run_alpha_expression_miner()
 
-        # 3. Run alpha submitter (once per day)
-        logger.info("Phase 3: Running alpha submitter...")
+        # 3. 运行 alpha 提交器（每天一次）
+        logger.info("阶段 3: 正在运行 alpha 提交器...")
         self.run_alpha_submitter(batch_size=3)
 
-        logger.info("Daily workflow completed")
+        logger.info("每日工作流已完成")
 
     def continuous_mining(self, mining_interval_hours: int = 6):
-        """Run continuous mining with concurrent alpha generation and expression mining."""
+        """运行连续挖掘，并发 alpha 生成和表达式挖掘"""
         logger.info(
-            f"Starting continuous mining with {mining_interval_hours}h intervals..."
+            f"正在启动连续挖掘，间隔 {mining_interval_hours} 小时..."
         )
 
         try:
-            # Start VRAM monitoring
-            logger.info("Starting VRAM monitoring...")
+            # 启动 VRAM 监控
+            logger.info("正在启动 VRAM 监控...")
             self.start_vram_monitoring()
 
-            # Start restart monitoring
-            logger.info("Starting restart monitoring...")
+            # 启动重启监控
+            logger.info("正在启动重启监控...")
             self.start_restart_monitoring()
 
-            # Start alpha generator in continuous mode
+            # 以连续模式启动 alpha 生成器
             self.start_alpha_generator_continuous(batch_size=3, sleep_time=30)
 
-            # Start alpha expression miner in a separate thread
+            # 在单独的线程中启动 alpha 表达式挖掘器
             miner_thread = threading.Thread(
                 target=self.start_alpha_expression_miner_continuous,
-                args=(mining_interval_hours * 3600,),  # Convert hours to seconds
+                args=(mining_interval_hours * 3600,),  # 将小时转换为秒
                 daemon=True,
             )
             miner_thread.start()
 
-            # Schedule daily submission at 2 PM
+            # 每天下午 2 点安排提交
             schedule.every().day.at("14:00").do(self.run_alpha_submitter)
 
             logger.info(
-                "Both alpha generator and expression miner are running concurrently"
+                "alpha 生成器和表达式挖掘器正在并发运行"
             )
             logger.info(
-                f"Max concurrent simulations: {self.max_concurrent_simulations}"
+                f"最大并发模拟数: {self.max_concurrent_simulations}"
             )
 
             while self.running:
                 try:
-                    # Run pending scheduled tasks
+                    # 运行待处理的任务
                     schedule.run_pending()
 
-                    # Check if generator process is still running
+                    # 检查生成器进程是否仍在运行
                     if (
                         self.generator_process
                         and self.generator_process.poll() is not None
                     ):
-                        logger.warning("Alpha generator process stopped, restarting...")
+                        logger.warning("alpha 生成器进程已停止，正在重启...")
                         self.start_alpha_generator_continuous(
                             batch_size=3, sleep_time=30
                         )
 
-                    # Small delay before next cycle
+                    # 下次循环前的小延迟
                     time.sleep(60)
 
                 except KeyboardInterrupt:
-                    logger.info("Received interrupt signal, stopping...")
+                    logger.info("收到中断信号，正在停止...")
                     break
                 except Exception as e:
-                    logger.error(f"Error in continuous mining: {e}")
-                    time.sleep(300)  # Wait 5 minutes before retrying
+                    logger.error(f"连续挖掘中出错: {e}")
+                    time.sleep(300)  # 重试前等待 5 分钟
 
         finally:
             self.stop_processes()
@@ -916,19 +916,19 @@ class AlphaOrchestrator:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Alpha Orchestrator - Manage alpha generation, mining, and submission"
+        description="Alpha 编排器 - 管理 alpha 生成、挖掘和提交"
     )
     parser.add_argument(
         "--credentials",
         type=str,
         default="./credential.txt",
-        help="Path to credentials file (default: ./credential.txt)",
+        help="凭证文件路径 (默认: ./credential.txt)",
     )
     parser.add_argument(
         "--ollama-url",
         type=str,
         default="http://localhost:11434",
-        help="Ollama API URL (default: http://localhost:11434)",
+        help="Ollama API URL (默认: http://localhost:11434)",
     )
     parser.add_argument(
         "--mode",
@@ -946,37 +946,37 @@ def main():
             "restart",
         ],
         default="continuous",
-        help="Operation mode (default: continuous)",
+        help="操作模式 (默认: continuous)",
     )
     parser.add_argument(
         "--mining-interval",
         type=int,
         default=6,
-        help="Mining interval in hours for continuous mode (default: 6)",
+        help="连续模式下的挖掘间隔（小时） (默认: 6)",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=3,
-        help="Batch size for operations (default: 3)",
+        help="操作批次大小 (默认: 3)",
     )
     parser.add_argument(
         "--max-concurrent",
         type=int,
         default=3,
-        help="Maximum concurrent simulations (default: 3)",
+        help="最大并发模拟数 (默认: 3)",
     )
     parser.add_argument(
         "--restart-interval",
         type=int,
         default=30,
-        help="Restart interval in minutes (default: 30)",
+        help="重启间隔（分钟） (默认: 30)",
     )
     parser.add_argument(
         "--ollama-model",
         type=str,
         default="deepseek-r1:8b",
-        help="Ollama model to use (default: deepseek-r1:8b)",
+        help="使用的 Ollama 模型 (默认: deepseek-r1:8b)",
     )
 
     args = parser.parse_args()
@@ -986,18 +986,18 @@ def main():
         orchestrator.max_concurrent_simulations = args.max_concurrent
         orchestrator.restart_interval = (
             args.restart_interval * 60
-        )  # Convert minutes to seconds
+        )  # 将分钟转换为秒
 
-        # Update the model fleet to use the specified model
+        # 更新模型队列以使用指定的模型
         if args.ollama_model:
-            # Find the model in the fleet and set it as current
+            # 在队列中找到模型并设置为当前模型
             for i, model_info in enumerate(
                 orchestrator.model_fleet_manager.model_fleet
             ):
                 if model_info.name == args.ollama_model:
                     orchestrator.model_fleet_manager.current_model_index = i
                     orchestrator.model_fleet_manager.save_state()
-                    logger.info(f"Set model fleet to use: {args.ollama_model}")
+                    logger.info(f"设置模型队列使用: {args.ollama_model}")
                     break
 
         if args.mode == "daily":
@@ -1015,19 +1015,19 @@ def main():
             print(json.dumps(status, indent=2))
         elif args.mode == "fleet-reset":
             orchestrator.reset_model_fleet()
-            print("Model fleet reset to preferred model (index 0)")
+            print("模型队列已重置为首选模型 (索引 0)")
         elif args.mode == "fleet-downgrade":
             orchestrator.force_model_downgrade()
-            print("Model fleet downgraded to next smaller model")
+            print("模型队列已降级到下一个更小的模型")
         elif args.mode == "fleet-reset-app":
             orchestrator.force_application_reset()
-            print("Application reset completed - pinned to preferred model")
+            print("应用重置完成 - 已固定到首选模型")
         elif args.mode == "restart":
             orchestrator.restart_all_processes()
-            print("Manual restart completed")
+            print("手动重启完成")
 
     except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        logger.error(f"致命错误: {e}")
         return 1
 
     return 0

@@ -9,19 +9,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import argparse
 from datetime import datetime, timedelta
 
-# Configure logger
+# 配置日志记录器
 logger = logging.getLogger(__name__)
 
 
 class ImprovedAlphaSubmitter:
     def __init__(self, credentials_path: str):
         self.sess = requests.Session()
-        # Set longer timeout for all requests
-        self.sess.timeout = (30, 300)  # (connect_timeout, read_timeout)
+        # 为所有请求设置更长的超时时间
+        self.sess.timeout = (30, 300)  # (连接超时, 读取超时)
         self.setup_auth(credentials_path)
 
     def setup_auth(self, credentials_path: str) -> None:
-        """Set up authentication with WorldQuant Brain."""
+        """设置 WorldQuant Brain 的身份验证。"""
         with open(credentials_path) as f:
             credentials = json.load(f)
 
@@ -30,15 +30,15 @@ class ImprovedAlphaSubmitter:
 
         response = self.sess.post("https://api.worldquantbrain.com/authentication")
         if response.status_code != 201:
-            raise Exception(f"Authentication failed: {response.text}")
-        logger.info("Successfully authenticated with WorldQuant Brain")
+            raise Exception(f"身份验证失败: {response.text}")
+        logger.info("成功通过 WorldQuant Brain 身份验证")
 
     def check_hopeful_alphas_count(self, min_count: int = 50) -> bool:
-        """Check if there are enough hopeful alphas to start submission."""
+        """检查是否有足够的有希望的 alpha 来开始提交。"""
         hopeful_file = "hopeful_alphas.json"
 
         if not os.path.exists(hopeful_file):
-            logger.info(f"Hopeful alphas file {hopeful_file} not found")
+            logger.info(f"未找到有希望的 alpha 文件 {hopeful_file}")
             return False
 
         try:
@@ -46,25 +46,25 @@ class ImprovedAlphaSubmitter:
                 hopeful_alphas = json.load(f)
 
             count = len(hopeful_alphas)
-            logger.info(f"Found {count} hopeful alphas in {hopeful_file}")
+            logger.info(f"在 {hopeful_file} 中找到 {count} 个有希望的 alpha")
 
             if count >= min_count:
                 logger.info(
-                    f"Sufficient hopeful alphas ({count} >= {min_count}), proceeding with submission"
+                    f"有足够的有希望的 alpha ({count} >= {min_count})，继续进行提交"
                 )
                 return True
             else:
                 logger.info(
-                    f"Insufficient hopeful alphas ({count} < {min_count}), skipping submission"
+                    f"没有足够的有希望的 alpha ({count} < {min_count})，跳过提交"
                 )
                 return False
 
         except Exception as e:
-            logger.error(f"Error reading hopeful alphas file: {str(e)}")
+            logger.error(f"读取有希望的 alpha 文件时出错: {str(e)}")
             return False
 
     def load_hopeful_alphas(self) -> List[Dict]:
-        """Load hopeful alphas from JSON file."""
+        """从 JSON 文件加载有希望的 alpha。"""
         hopeful_file = "hopeful_alphas.json"
 
         try:
@@ -72,16 +72,16 @@ class ImprovedAlphaSubmitter:
                 hopeful_alphas = json.load(f)
 
             logger.info(
-                f"Loaded {len(hopeful_alphas)} hopeful alphas from {hopeful_file}"
+                f"从 {hopeful_file} 加载了 {len(hopeful_alphas)} 个有希望的 alpha"
             )
             return hopeful_alphas
 
         except Exception as e:
-            logger.error(f"Error loading hopeful alphas: {str(e)}")
+            logger.error(f"加载有希望的 alpha 时出错: {str(e)}")
             return []
 
     def fetch_successful_alphas(self, offset: int = 0, limit: int = 10) -> Dict:
-        """Fetch successful unsubmitted alphas with good performance metrics."""
+        """获取具有良好性能指标的未提交成功的 alpha。"""
         url = "https://api.worldquantbrain.com/users/self/alphas"
         params = {
             "limit": limit,
@@ -93,63 +93,63 @@ class ImprovedAlphaSubmitter:
             "hidden": "false",
         }
 
-        logger.info(f"Fetching alphas with params: {params}")
+        logger.info(f"使用参数获取 alpha: {params}")
         full_url = f"{url}?{'&'.join(f'{k}={v}' for k,v in params.items())}"
-        logger.info(f"Request URL: {full_url}")
+        logger.info(f"请求 URL: {full_url}")
 
         max_retries = 5
         base_delay = 30
 
         for attempt in range(max_retries):
             try:
-                logger.debug(f"Attempt {attempt + 1}/{max_retries} to fetch alphas")
+                logger.debug(f"尝试 {attempt + 1}/{max_retries} 获取 alpha")
                 response = self.sess.get(url, params=params)
-                logger.info(f"Response URL: {response.url}")
-                logger.info(f"Response status: {response.status_code}")
+                logger.info(f"响应 URL: {response.url}")
+                logger.info(f"响应状态码: {response.status_code}")
 
                 if response.status_code == 429:  # Too Many Requests
                     wait_time = int(
                         response.headers.get("Retry-After", base_delay * (2**attempt))
                     )
-                    logger.info(f"Rate limited. Waiting {wait_time} seconds...")
+                    logger.info(f"请求频率受限。等待 {wait_time} 秒...")
                     time.sleep(wait_time)
                     continue
 
                 response.raise_for_status()
                 data = response.json()
                 logger.info(
-                    f"Successfully fetched {len(data.get('results', []))} alphas. Total count: {data.get('count', 0)}"
+                    f"成功获取 {len(data.get('results', []))} 个 alpha。总数: {data.get('count', 0)}"
                 )
                 return data
 
             except requests.exceptions.Timeout as e:
-                logger.warning(f"Timeout on attempt {attempt + 1}: {str(e)}")
+                logger.warning(f"尝试 {attempt + 1} 超时: {str(e)}")
                 if attempt < max_retries - 1:
                     wait_time = base_delay * (2**attempt)
-                    logger.info(f"Waiting {wait_time} seconds before retry...")
+                    logger.info(f"等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
                     logger.error(
-                        f"Failed to fetch alphas after {max_retries} attempts due to timeouts"
+                        f"在 {max_retries} 次尝试后由于超时而无法获取 alpha"
                     )
                     return {"count": 0, "results": []}
 
             except Exception as e:
                 if attempt < max_retries - 1:
-                    logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                    logger.warning(f"尝试 {attempt + 1} 失败: {str(e)}")
                     wait_time = base_delay * (2**attempt)
-                    logger.info(f"Waiting {wait_time} seconds before retry...")
+                    logger.info(f"等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
                     logger.error(
-                        f"Failed to fetch alphas after {max_retries} attempts. Last error: {e}"
+                        f"在 {max_retries} 次尝试后无法获取 alpha。最后错误: {e}"
                     )
                     return {"count": 0, "results": []}
 
         return {"count": 0, "results": []}
 
     def monitor_submission(self, alpha_id: str, max_timeout_minutes: int = 15) -> Dict:
-        """Monitor submission status with improved timeout handling."""
+        """使用改进的超时处理监控提交状态。"""
         url = f"https://api.worldquantbrain.com/alphas/{alpha_id}/submit"
 
         start_time = time.time()
@@ -165,43 +165,43 @@ class ImprovedAlphaSubmitter:
 
             try:
                 logger.info(
-                    f"Monitoring attempt {attempt} for alpha {alpha_id} (elapsed: {elapsed_minutes:.1f} minutes)"
+                    f"监控尝试 {attempt} 对 alpha {alpha_id} (已用时间: {elapsed_minutes:.1f} 分钟)"
                 )
                 response = self.sess.get(url)
-                logger.info(f"Response status: {response.status_code}")
+                logger.info(f"响应状态码: {response.status_code}")
 
                 if response.status_code == 404:
-                    logger.info(f"Alpha {alpha_id} already submitted or not found")
+                    logger.info(f"Alpha {alpha_id} 已提交或未找到")
                     return {"status": "already_submitted", "alpha_id": alpha_id}
 
                 if response.status_code != 200:
-                    logger.error(f"Submission failed for alpha {alpha_id}")
-                    logger.error(f"Response status: {response.status_code}")
-                    logger.error(f"Response text: {response.text}")
+                    logger.error(f"Alpha {alpha_id} 提交失败")
+                    logger.error(f"响应状态码: {response.status_code}")
+                    logger.error(f"响应文本: {response.text}")
                     return {
                         "status": "failed",
                         "error": response.text,
                         "alpha_id": alpha_id,
                     }
 
-                # If response is empty (still submitting)
+                # 如果响应为空（仍在提交中）
                 if not response.text.strip():
-                    logger.info(f"Alpha {alpha_id} still being submitted, waiting...")
-                    # Exponential backoff with cap
+                    logger.info(f"Alpha {alpha_id} 仍在提交中，等待中...")
+                    # 指数退避策略，设置上限
                     sleep_time = min(
                         base_sleep_time * (1.5 ** (attempt - 1)), max_sleep_time
                     )
                     time.sleep(sleep_time)
                     continue
 
-                # Try to parse JSON response (submission complete)
+                # 尝试解析 JSON 响应（提交完成）
                 try:
                     data = response.json()
-                    logger.info(f"Submission complete for alpha {alpha_id}")
+                    logger.info(f"Alpha {alpha_id} 提交完成")
                     return {"status": "success", "data": data, "alpha_id": alpha_id}
                 except json.JSONDecodeError:
                     logger.info(
-                        f"Response not in JSON format yet for alpha {alpha_id}, continuing to monitor..."
+                        f"Alpha {alpha_id} 的响应尚未采用 JSON 格式，继续监控..."
                     )
                     sleep_time = min(
                         base_sleep_time * (1.5 ** (attempt - 1)), max_sleep_time
@@ -210,46 +210,46 @@ class ImprovedAlphaSubmitter:
 
             except requests.exceptions.Timeout as e:
                 logger.warning(
-                    f"Timeout on monitoring attempt {attempt} for alpha {alpha_id}: {str(e)}"
+                    f"监控尝试 {attempt} 对 alpha {alpha_id} 超时: {str(e)}"
                 )
                 if (time.time() - start_time) < max_timeout_seconds:
                     sleep_time = min(base_sleep_time * (2**attempt), max_sleep_time)
-                    logger.info(f"Waiting {sleep_time} seconds before retry...")
+                    logger.info(f"等待 {sleep_time} 秒后重试...")
                     time.sleep(sleep_time)
                 else:
                     logger.error(
-                        f"Monitoring timed out for alpha {alpha_id} after {max_timeout_minutes} minutes"
+                        f"监控 alpha {alpha_id} 在 {max_timeout_minutes} 分钟后超时"
                     )
                     return {
                         "status": "timeout",
-                        "error": "Monitoring timed out",
+                        "error": "监控超时",
                         "alpha_id": alpha_id,
                     }
 
             except Exception as e:
                 logger.warning(
-                    f"Monitor attempt {attempt} failed for alpha {alpha_id}: {str(e)}"
+                    f"监控尝试 {attempt} 对 alpha {alpha_id} 失败: {str(e)}"
                 )
                 if (time.time() - start_time) < max_timeout_seconds:
                     sleep_time = min(base_sleep_time * (1.5**attempt), max_sleep_time)
                     time.sleep(sleep_time)
                 else:
                     logger.error(
-                        f"Monitoring failed for alpha {alpha_id} after {max_timeout_minutes} minutes"
+                        f"监控 alpha {alpha_id} 在 {max_timeout_minutes} 分钟后失败"
                     )
                     return {"status": "error", "error": str(e), "alpha_id": alpha_id}
 
         logger.error(
-            f"Monitoring timed out for alpha {alpha_id} after {max_timeout_minutes} minutes"
+            f"监控 alpha {alpha_id} 在 {max_timeout_minutes} 分钟后超时"
         )
         return {
             "status": "timeout",
-            "error": "Monitoring timed out",
+            "error": "监控超时",
             "alpha_id": alpha_id,
         }
 
     def log_submission_result(self, alpha_id: str, result: Dict) -> None:
-        """Log submission result to file."""
+        """将提交结果记录到文件。"""
         log_file = "submission_results.json"
 
         # Load existing results
@@ -259,7 +259,7 @@ class ImprovedAlphaSubmitter:
                 with open(log_file, "r") as f:
                     existing_results = json.load(f)
             except json.JSONDecodeError:
-                logger.warning(f"Could not parse {log_file}, starting fresh")
+                logger.warning(f"无法解析 {log_file}，重新开始")
 
         # Add new result
         entry = {
@@ -274,18 +274,18 @@ class ImprovedAlphaSubmitter:
         with open(log_file, "w") as f:
             json.dump(existing_results, f, indent=2)
 
-        logger.info(f"Logged submission result for alpha {alpha_id}")
+        logger.info(f"已记录 alpha {alpha_id} 的提交结果")
 
     def has_fail_checks(self, alpha: Dict) -> bool:
-        """Check if alpha has any FAIL results in checks."""
+        """检查 alpha 的检查结果中是否有 FAIL。"""
         checks = alpha.get("checks", [])
         return any(check.get("result") == "FAIL" for check in checks)
 
     def submit_alpha(self, alpha_id: str) -> bool:
-        """Submit a single alpha and monitor its status."""
+        """提交单个 alpha 并监控其状态。"""
         url = f"https://api.worldquantbrain.com/alphas/{alpha_id}/submit"
-        logger.info(f"Submitting alpha {alpha_id}")
-        logger.info(f"Request URL: {url}")
+        logger.info(f"正在提交 alpha {alpha_id}")
+        logger.info(f"请求 URL: {url}")
 
         max_retries = 3
         base_delay = 10
@@ -294,14 +294,14 @@ class ImprovedAlphaSubmitter:
             try:
                 # Initial submission
                 response = self.sess.post(url)
-                logger.info(f"Response status: {response.status_code}")
+                logger.info(f"响应状态码: {response.status_code}")
 
                 if response.status_code == 201:
                     logger.info(
-                        f"Successfully submitted alpha {alpha_id}, monitoring status..."
+                        f"成功提交 alpha {alpha_id}，正在监控状态..."
                     )
 
-                    # Monitor submission status with longer timeout
+                    # 使用更长的超时时间监控提交状态
                     result = self.monitor_submission(alpha_id, max_timeout_minutes=20)
                     if result:
                         self.log_submission_result(alpha_id, result)
@@ -309,56 +309,56 @@ class ImprovedAlphaSubmitter:
                             return True
                         else:
                             logger.error(
-                                f"Submission failed for alpha {alpha_id}: {result.get('error', 'Unknown error')}"
+                                f"Alpha {alpha_id} 提交失败: {result.get('error', '未知错误')}"
                             )
                             return False
                     else:
                         logger.error(
-                            f"Submission monitoring failed for alpha {alpha_id}"
+                            f"监控 alpha {alpha_id} 提交状态失败"
                         )
                         return False
 
                 elif response.status_code == 409:
-                    logger.info(f"Alpha {alpha_id} already submitted")
+                    logger.info(f"Alpha {alpha_id} 已提交")
                     return True
 
                 else:
                     logger.error(
-                        f"Failed to submit alpha {alpha_id}. Status: {response.status_code}"
+                        f"提交 alpha {alpha_id} 失败。状态码: {response.status_code}"
                     )
-                    logger.error(f"Response text: {response.text}")
+                    logger.error(f"响应文本: {response.text}")
 
                     if attempt < max_retries - 1:
                         wait_time = base_delay * (2**attempt)
-                        logger.info(f"Waiting {wait_time} seconds before retry...")
+                        logger.info(f"等待 {wait_time} 秒后重试...")
                         time.sleep(wait_time)
                     else:
                         return False
 
             except requests.exceptions.Timeout as e:
                 logger.warning(
-                    f"Timeout on submission attempt {attempt + 1} for alpha {alpha_id}: {str(e)}"
+                    f"提交尝试 {attempt + 1} 对 alpha {alpha_id} 超时: {str(e)}"
                 )
                 if attempt < max_retries - 1:
                     wait_time = base_delay * (2**attempt)
-                    logger.info(f"Waiting {wait_time} seconds before retry...")
+                    logger.info(f"等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
                     logger.error(
-                        f"Submission timed out for alpha {alpha_id} after {max_retries} attempts"
+                        f"在 {max_retries} 次尝试后，alpha {alpha_id} 提交超时"
                     )
                     return False
 
             except Exception as e:
                 logger.error(
-                    f"Error submitting alpha {alpha_id} (attempt {attempt + 1}): {str(e)}"
+                    f"提交 alpha {alpha_id} 时出错 (尝试 {attempt + 1}): {str(e)}"
                 )
                 if attempt < max_retries - 1:
                     wait_time = base_delay * (2**attempt)
-                    logger.info(f"Waiting {wait_time} seconds before retry...")
+                    logger.info(f"等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
-                    logger.exception("Full traceback:")
+                    logger.exception("完整堆栈跟踪:")
                     return False
 
         return False
@@ -467,7 +467,7 @@ class ImprovedAlphaSubmitter:
             logger.info(f"Cleared {hopeful_file} after successful submission")
 
         except Exception as e:
-            logger.error(f"Error cleaning up hopeful alphas file: {str(e)}")
+            logger.error(f"清理有希望的 alpha 文件时出错: {str(e)}")
 
     def batch_submit(self, batch_size: int = 3) -> None:
         """Submit alphas in batches with improved error handling."""

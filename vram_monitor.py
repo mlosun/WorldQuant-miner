@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-VRAM Monitor for WorldQuant Alpha Mining System
-Monitors GPU memory usage and restarts services if VRAM usage is too high.
+VRAM 监控器 - WorldQuant Alpha 挖矿系统
+监控 GPU 内存使用情况，并在 VRAM 使用过高时重启服务。
 """
 
 import subprocess
@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 class VRAMMonitor:
     def __init__(self, vram_threshold: float = 0.9, check_interval: int = 60):
         """
-        Initialize VRAM monitor.
+        初始化 VRAM 监控器。
 
-        Args:
-            vram_threshold: Percentage of VRAM usage that triggers cleanup (0.0-1.0)
-            check_interval: How often to check VRAM usage in seconds
+        参数:
+            vram_threshold: 触发清理的 VRAM 使用百分比 (0.0-1.0)
+            check_interval: 检查 VRAM 使用情况的间隔时间（秒）
         """
         self.vram_threshold = vram_threshold
         self.check_interval = check_interval
@@ -35,7 +35,7 @@ class VRAMMonitor:
         self.max_restarts = 3
 
     def get_gpu_info(self) -> List[Dict]:
-        """Get GPU information using nvidia-smi."""
+        """使用 nvidia-smi 获取 GPU 信息。"""
         try:
             result = subprocess.run(
                 [
@@ -77,7 +77,7 @@ class VRAMMonitor:
             return []
 
     def check_vram_usage(self) -> bool:
-        """Check if VRAM usage is above threshold."""
+        """检查 VRAM 使用是否超过阈值。"""
         gpu_info = self.get_gpu_info()
 
         for gpu in gpu_info:
@@ -98,9 +98,9 @@ class VRAMMonitor:
         return False
 
     def restart_ollama_service(self) -> bool:
-        """Restart the Ollama service to free VRAM."""
+        """重启 Ollama 服务以释放 VRAM。"""
         try:
-            logger.info("Restarting Ollama service...")
+            logger.info("正在重启 Ollama 服务...")
 
             # Stop Ollama
             subprocess.run(
@@ -132,7 +132,7 @@ class VRAMMonitor:
             # Wait for service to be ready
             time.sleep(30)
 
-            logger.info("Ollama service restarted successfully")
+            logger.info("Ollama 服务重启成功")
             return True
 
         except subprocess.TimeoutExpired:
@@ -143,9 +143,9 @@ class VRAMMonitor:
             return False
 
     def cleanup_vram(self) -> bool:
-        """Attempt to clean up VRAM without restarting."""
+        """尝试在不重启的情况下清理 VRAM。"""
         try:
-            logger.info("Attempting VRAM cleanup...")
+            logger.info("正在尝试清理 VRAM...")
 
             # Try to restart just the Ollama container
             result = subprocess.run(
@@ -163,7 +163,7 @@ class VRAMMonitor:
             )
 
             if result.returncode == 0:
-                logger.info("VRAM cleanup completed")
+                logger.info("VRAM 清理完成")
                 return True
             else:
                 logger.warning(f"VRAM cleanup failed: {result.stderr}")
@@ -174,25 +174,25 @@ class VRAMMonitor:
             return False
 
     def run(self):
-        """Main monitoring loop."""
-        logger.info(f"Starting VRAM monitor with threshold {self.vram_threshold:.1%}")
-        logger.info(f"Check interval: {self.check_interval} seconds")
+        """主监控循环。"""
+        logger.info(f"启动 VRAM 监控器，阈值设置为 {self.vram_threshold:.1%}")
+        logger.info(f"检查间隔: {self.check_interval} 秒")
 
         while True:
             try:
                 if self.check_vram_usage():
-                    logger.warning("High VRAM usage detected!")
+                    logger.warning("检测到 VRAM 使用过高！")
 
                     # Try cleanup first
                     if self.cleanup_vram():
-                        logger.info("VRAM cleanup successful")
+                        logger.info("VRAM 清理成功")
                         time.sleep(30)  # Wait and check again
                         continue
 
                     # If cleanup failed and we haven't exceeded max restarts
                     if self.restart_count < self.max_restarts:
                         logger.warning(
-                            f"Attempting service restart ({self.restart_count + 1}/{self.max_restarts})"
+                            f"正在尝试重启服务 ({self.restart_count + 1}/{self.max_restarts})"
                         )
                         if self.restart_ollama_service():
                             self.restart_count += 1

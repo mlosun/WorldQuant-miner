@@ -23,33 +23,33 @@ class MachineMiner:
 
     def mine_alphas(self, region="USA", universe="TOP3000"):
         logging.info(
-            f"Starting machine alpha mining for region: {region}, universe: {universe}"
+            f"开始机器 alpha 挖掘，区域: {region}, 宇宙: {universe}"
         )
 
         while True:
             try:
                 # Get data fields
-                logging.info("Fetching data fields...")
+                logging.info("正在获取数据字段...")
                 fields_df = self.brain.get_datafields(region=region, universe=universe)
-                logging.info(f"Got {len(fields_df)} data fields")
+                logging.info(f"获取到 {len(fields_df)} 个数据字段")
 
                 matrix_fields = self.brain.process_datafields(fields_df, "matrix")
                 vector_fields = self.brain.process_datafields(fields_df, "vector")
                 logging.info(
-                    f"Processed {len(matrix_fields)} matrix fields and {len(vector_fields)} vector fields"
+                    f"已处理 {len(matrix_fields)} 个矩阵字段和 {len(vector_fields)} 个向量字段"
                 )
 
                 # Generate first order alphas
-                logging.info("Generating first order alphas...")
+                logging.info("正在生成一阶 alpha...")
                 first_order = self.brain.get_first_order(
                     vector_fields + matrix_fields, self.brain.ops_set
                 )
-                logging.info(f"Generated {len(first_order)} first order alphas")
-                logging.info(f"Sample alphas: {first_order[:3]}")
+                logging.info(f"已生成 {len(first_order)} 个一阶 alpha")
+                logging.info(f"示例 alpha: {first_order[:3]}")
 
                 # Process alphas one at a time
                 for i, alpha in enumerate(first_order):
-                    logging.info(f"Processing alpha {i+1}/{len(first_order)}: {alpha}")
+                    logging.info(f"正在处理 alpha {i+1}/{len(first_order)}: {alpha}")
 
                     # Create alpha data with decay 0
                     alpha_data = [(alpha, 0)]
@@ -67,7 +67,7 @@ class MachineMiner:
                         if results:
                             for result in results:
                                 if self._process_result(result, alpha):
-                                    logging.info(f"Found promising alpha: {alpha}")
+                                    logging.info(f"发现潜力 alpha: {alpha}")
 
                         # Add small delay between simulations
                         sleep(1)
@@ -77,19 +77,19 @@ class MachineMiner:
                             self.brain.login()
 
                     except Exception as e:
-                        logging.error(f"Error processing alpha {alpha}: {str(e)}")
+                        logging.error(f"处理 alpha {alpha} 时出错: {str(e)}")
                         sleep(60)  # Longer sleep on error
                         self.brain.login()
                         continue
 
             except Exception as e:
-                logging.error(f"Error in mining loop: {str(e)}")
+                logging.error(f"挖掘循环中出错: {str(e)}")
                 sleep(600)
                 self.brain.login()
                 continue
 
     def _process_result(self, result: dict, alpha: str) -> bool:
-        """Process a single simulation result."""
+        """处理单个模拟结果。"""
         try:
             if not result.get("is"):
                 return False
@@ -114,11 +114,11 @@ class MachineMiner:
             return False
 
         except Exception as e:
-            logging.error(f"Error processing result: {str(e)}")
+            logging.error(f"处理结果时出错: {str(e)}")
             return False
 
     def _save_result(self, alpha: str, result: dict):
-        """Save successful alpha result to file."""
+        """将成功的 alpha 结果保存到文件。"""
         timestamp = int(time.time())
         output = {"timestamp": timestamp, "alpha": alpha, "result": result}
 
@@ -126,7 +126,7 @@ class MachineMiner:
         with open(filename, "w") as f:
             json.dump(output, f, indent=2)
 
-        logging.info(f"Saved successful alpha to {filename}")
+        logging.info(f"已保存成功的 alpha 到 {filename}")
 
 
 def main():
@@ -151,7 +151,7 @@ def main():
             username = credentials[0]
             password = credentials[1]
     except Exception as e:
-        logging.error(f"Error reading credentials from {args.credentials}: {e}")
+        logging.error(f"从 {args.credentials} 读取凭证时出错: {e}")
         return 1
 
     miner = MachineMiner(username, password)

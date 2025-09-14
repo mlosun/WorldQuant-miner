@@ -17,7 +17,7 @@ def auth_session(credentials_path: str) -> requests.Session:
     s.auth = HTTPBasicAuth(u, p)
     r = s.post("https://api.worldquantbrain.com/authentication")
     if r.status_code != 201:
-        raise RuntimeError(f"Auth failed: {r.text}")
+        raise RuntimeError(f"认证失败: {r.text}")
     return s
 
 
@@ -61,13 +61,13 @@ def monitor_sim(s: requests.Session, progress_url: str, timeout_s: int = 3600) -
         if st == "COMPLETE":
             alpha_id = data.get("alpha")
             if not alpha_id:
-                return {"status": "error", "message": "missing alpha id"}
+                return {"status": "error", "message": "缺少 alpha id"}
             a = s.get(f"https://api.worldquantbrain.com/alphas/{alpha_id}")
             if a.status_code != 200:
                 return {"status": "error", "message": a.text}
             return {"status": "complete", "alpha": a.json()}
         if st == "ERROR":
-            return {"status": "error", "message": "simulation error"}
+            return {"status": "error", "message": "模拟错误"}
         time.sleep(5)
     return {"status": "timeout"}
 
@@ -76,23 +76,23 @@ def generate_templates() -> List[str]:
     wins = [20, 60, 120, 252]
     ranks = [5, 20]
     exprs: List[str] = []
-    # group_neutralize(zscore(ts_mean(returns,W)), "sector")
+    # 分组中性化(zscore(ts_mean(returns,W)), "sector")
     for w in wins:
         exprs.append(f'group_neutralize(zscore(ts_mean(returns, {w})), "sector")')
-    # group_neutralize(zscore(ts_mean(returns,W1)-ts_mean(returns,W2)), "sector")
+    # 分组中性化(zscore(ts_mean(returns,W1)-ts_mean(returns,W2)), "sector")
     for w1 in wins:
         for w2 in wins:
             if w2 > w1:
                 exprs.append(
                     f'group_neutralize(zscore(ts_mean(returns, {w1}) - ts_mean(returns, {w2})), "sector")'
                 )
-    # group_neutralize(zscore(ts_rank(ts_mean(returns,W), R)), "sector")
+    # 分组中性化(zscore(ts_rank(ts_mean(returns,W), R)), "sector")
     for w in wins:
         for r in ranks:
             exprs.append(
                 f'group_neutralize(zscore(ts_rank(ts_mean(returns, {w}), {r})), "sector")'
             )
-    # group_neutralize(zscore(rank(divide(revenue, assets)))), "sector")
+    # 分组中性化(zscore(rank(divide(revenue, assets)))), "sector")
     exprs.append('group_neutralize(zscore(rank(divide(revenue, assets))), "sector")')
     return exprs
 
@@ -122,10 +122,10 @@ def main():
     results = []
 
     for i, expr in enumerate(exprs, 1):
-        logger.info(f"Testing {i}/{len(exprs)}: {expr}")
+        logger.info(f"测试中 {i}/{len(exprs)}: {expr}")
         sub = submit_sim(s, expr)
         if sub.get("status") != "success":
-            logger.warning(f"Submit error: {sub.get('message')}")
+            logger.warning(f"提交错误: {sub.get('message')}")
             continue
         mon = monitor_sim(s, sub["progress_url"], timeout_s=args.timeout)
         if mon.get("status") == "complete":
@@ -133,7 +133,7 @@ def main():
             is_data = alpha.get("is", {})
             fitness = is_data.get("fitness")
             sharpe = is_data.get("sharpe")
-            logger.info(f"Completed. Fitness={fitness}, Sharpe={sharpe}")
+            logger.info(f"完成. 适应度={fitness}, 夏普比率={sharpe}")
             # Append to hopeful if strong
             if fitness is not None and fitness > 1:
                 try:
@@ -156,16 +156,16 @@ def main():
                     )
                     json.dump(hopeful, open("hopeful_alphas.json", "w"), indent=2)
                 except Exception as e:
-                    logger.error(f"Failed to write hopeful_alphas.json: {e}")
+                    logger.error(f"写入 hopeful_alphas.json 失败: {e}")
         elif mon.get("status") == "timeout":
-            logger.warning("Monitoring timeout")
+            logger.warning("监控超时")
         else:
-            logger.warning(f"Simulation failed: {mon.get('message')}")
+            logger.warning(f"模拟失败: {mon.get('message')}")
         results.append({"expression": expr, "result": mon})
 
     with open("template_grid_results.json", "w") as f:
         json.dump(results, f, indent=2)
-    logger.info("Template+Grid mining complete")
+    logger.info("模板+网格挖掘完成")
 
 
 if __name__ == "__main__":

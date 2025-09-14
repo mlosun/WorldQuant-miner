@@ -90,8 +90,8 @@ class WorldQuantBrain:
         self.login()
 
     def login(self):
-        """Initialize or refresh session with WorldQuant Brain."""
-        logging.info("Authenticating with WorldQuant Brain...")
+        """初始化或刷新与 WorldQuant Brain 的会话。"""
+        logging.info("正在与 WorldQuant Brain 进行身份验证...")
         self.session = requests.Session()
         self.session.auth = (self.username, self.password)
         response = self.session.post("https://api.worldquantbrain.com/authentication")
@@ -102,22 +102,22 @@ class WorldQuantBrain:
         self.session.headers.update(
             {"Content-Type": "application/json", "Accept": "application/json"}
         )
-        logging.info("Authentication successful")
+        logging.info("身份验证成功")
         return self.session
 
     def _extract_inaccessible_operator(self, error_message: str) -> str:
-        """Extract the inaccessible operator from error message."""
+        """从错误消息中提取不可访问的操作符。"""
         match = re.search(r'operator "([^"]+)"', error_message)
         if match:
             return match.group(1)
         return None
 
     def _has_inaccessible_operator(self, alpha: str) -> bool:
-        """Check if alpha expression contains any inaccessible operators."""
+        """检查 alpha 表达式是否包含任何不可访问的操作符。"""
         for op in self.inaccessible_ops:
             if op in alpha:
                 logging.warning(
-                    f"Skipping alpha with inaccessible operator '{op}': {alpha}"
+                    f"跳过包含不可访问操作符 '{op}' 的 alpha: {alpha}"
                 )
                 return True
         return False
@@ -125,8 +125,8 @@ class WorldQuantBrain:
     def single_simulate(
         self, alpha_data: list, neut: str, region: str, universe: str
     ) -> dict:
-        """Run a single alpha simulation."""
-        logging.info(f"Starting single simulation for alpha")
+        """运行单个 alpha 模拟。"""
+        logging.info(f"开始单个 alpha 模拟")
 
         sim_data_list = self.generate_sim_data(alpha_data, region, universe, neut)
         results = []
@@ -141,19 +141,19 @@ class WorldQuantBrain:
                     "https://api.worldquantbrain.com/simulations", json=sim_data
                 )
                 if simulation_response.status_code == 401:
-                    logging.info("Session expired, re-authenticating...")
+                    logging.info("会话已过期，重新进行身份验证...")
                     self.login()
                     simulation_response = self.session.post(
                         "https://api.worldquantbrain.com/simulations", json=sim_data
                     )
 
                 if simulation_response.status_code != 201:
-                    logging.error(f"Simulation API error: {simulation_response.text}")
+                    logging.error(f"模拟 API 错误: {simulation_response.text}")
                     continue
 
                 simulation_progress_url = simulation_response.headers.get("Location")
                 if not simulation_progress_url:
-                    logging.error("No Location header in response")
+                    logging.error("响应中没有 Location 头信息")
                     continue
 
                 # Monitor this single simulation
@@ -170,7 +170,7 @@ class WorldQuantBrain:
         return results
 
     def _monitor_single_progress(self, progress_url: str) -> dict:
-        """Monitor a single simulation's progress."""
+        """监控单个模拟的进度。"""
         try:
             while True:
                 simulation_progress = self.session.get(progress_url)
@@ -179,13 +179,13 @@ class WorldQuantBrain:
                 if not retry_after:
                     result = simulation_progress.json()
                     status = result.get("status")
-                    logging.info(f"Simulation status: {status}")
+                    logging.info(f"模拟状态: {status}")
 
                     if status == "COMPLETE":
                         return result
                     elif status in ["FAILED", "ERROR"]:
                         error_message = result.get("message", "")
-                        logging.error(f"Simulation failed: {result}")
+                        logging.error(f"模拟失败: {result}")
 
                         # Check if error is due to inaccessible operator
                         inaccessible_op = self._extract_inaccessible_operator(
@@ -196,7 +196,7 @@ class WorldQuantBrain:
                             and inaccessible_op not in self.inaccessible_ops
                         ):
                             logging.info(
-                                f"Adding new inaccessible operator: {inaccessible_op}"
+                                f"添加新的不可访问操作符: {inaccessible_op}"
                             )
                             self.inaccessible_ops.append(inaccessible_op)
 

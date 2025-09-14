@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 app = Flask(__name__)
 
-# Configure logging
+# 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class AlphaDashboard:
         self.logs_dir = "logs"
 
     def get_system_status(self) -> Dict:
-        """Get overall system status."""
+        """获取系统整体状态。"""
         status = {
             "timestamp": datetime.now().isoformat(),
             "gpu": self.get_gpu_status(),
@@ -38,9 +38,9 @@ class AlphaDashboard:
         return status
 
     def get_gpu_status(self) -> Dict:
-        """Get GPU status and utilization."""
+        """获取 GPU 状态和使用情况。"""
         try:
-            # Try to get GPU info from nvidia-smi
+            # 尝试从 nvidia-smi 获取 GPU 信息
             result = subprocess.run(
                 [
                     "nvidia-smi",
@@ -68,12 +68,12 @@ class AlphaDashboard:
                             ),
                         }
         except Exception as e:
-            logger.warning(f"Could not get GPU status: {e}")
+            logger.warning(f"无法获取 GPU 状态: {e}")
 
         return {"status": "unknown", "error": "GPU information not available"}
 
     def get_ollama_status(self) -> Dict:
-        """Get Ollama service status."""
+        """获取 Ollama 服务状态。"""
         try:
             response = requests.get("http://localhost:11434/api/tags", timeout=5)
             if response.status_code == 200:
@@ -85,12 +85,12 @@ class AlphaDashboard:
                     "model_count": len(models),
                 }
         except Exception as e:
-            logger.warning(f"Could not get Ollama status: {e}")
+            logger.warning(f"无法获取 Ollama 状态: {e}")
 
         return {"status": "not_responding", "error": "Ollama service not available"}
 
     def get_orchestrator_status(self) -> Dict:
-        """Get orchestrator status from Docker container logs."""
+        """从 Docker 容器日志中获取编排器状态。"""
         status = {
             "status": "unknown",
             "last_activity": None,
@@ -100,7 +100,7 @@ class AlphaDashboard:
         }
 
         try:
-            # Try to get Docker container logs
+            # 尝试获取 Docker 容器日志
             result = subprocess.run(
                 ["docker", "logs", "--tail", "50", "naive-ollma-gpu"],
                 capture_output=True,
@@ -162,12 +162,12 @@ class AlphaDashboard:
                 status["next_mining"] = next_mining.isoformat()
 
         except Exception as e:
-            logger.warning(f"Could not get orchestrator status: {e}")
+            logger.warning(f"无法获取编排器状态: {e}")
 
         return status
 
     def get_worldquant_status(self) -> Dict:
-        """Check WorldQuant Brain API status."""
+        """检查 WorldQuant Brain API 状态。"""
         try:
             if os.path.exists("credential.txt"):
                 with open("credential.txt", "r") as f:
@@ -190,12 +190,12 @@ class AlphaDashboard:
                         "message": f"Status: {response.status_code}",
                     }
         except Exception as e:
-            logger.warning(f"Could not check WorldQuant status: {e}")
+            logger.warning(f"无法检查 WorldQuant 状态: {e}")
 
         return {"status": "unknown", "message": "Could not verify connection"}
 
     def get_recent_activity(self) -> List[Dict]:
-        """Get recent activity from Docker container logs."""
+        """从 Docker 容器日志中获取最近活动。"""
         activities = []
 
         try:

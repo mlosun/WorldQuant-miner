@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_test_hopeful_alphas():
-    """Create a test hopeful_alphas.json file for testing."""
+    """创建一个测试用的 hopeful_alphas.json 文件。"""
     test_alphas = [
         {
             "expression": "rank(close)",
@@ -48,28 +48,28 @@ def create_test_hopeful_alphas():
     with open("hopeful_alphas.json", "w") as f:
         json.dump(test_alphas, f, indent=2)
 
-    logger.info("Created test hopeful_alphas.json with 2 test alphas")
+    logger.info("已创建包含 2 个测试 alpha 的 hopeful_alphas.json 文件")
 
 
 def test_orchestrator_initialization():
-    """Test that the orchestrator can be initialized properly."""
-    logger.info("Testing orchestrator initialization...")
+    """测试 Orchestrator 是否能正确初始化。"""
+    logger.info("测试 Orchestrator 初始化...")
 
     try:
         orchestrator = AlphaOrchestrator("./credential.txt")
-        logger.info("✓ Orchestrator initialized successfully")
+        logger.info("✓ Orchestrator 初始化成功")
         logger.info(
             f"✓ Max concurrent simulations: {orchestrator.max_concurrent_simulations}"
         )
         return orchestrator
     except Exception as e:
-        logger.error(f"✗ Failed to initialize orchestrator: {e}")
+        logger.error(f"✗ Orchestrator 初始化失败: {e}")
         return None
 
 
 def test_concurrent_execution():
-    """Test concurrent execution of generator and miner."""
-    logger.info("Testing concurrent execution...")
+    """测试生成器和挖掘器的并发执行。"""
+    logger.info("测试并发执行...")
 
     orchestrator = test_orchestrator_initialization()
     if not orchestrator:
@@ -80,22 +80,22 @@ def test_concurrent_execution():
 
     try:
         # Test the continuous miner function directly
-        logger.info("Testing alpha expression miner with test data...")
+        logger.info("使用测试数据测试 alpha 表达式挖掘器...")
 
         # Run the miner once to see if it works
         orchestrator.run_alpha_expression_miner()
 
-        logger.info("✓ Alpha expression miner test completed")
+        logger.info("✓ Alpha 表达式挖掘器测试完成")
         return True
 
     except Exception as e:
-        logger.error(f"✗ Failed to test concurrent execution: {e}")
+        logger.error(f"✗ 并发执行测试失败: {e}")
         return False
 
 
 def test_command_line_arguments():
-    """Test that the orchestrator accepts the correct command line arguments."""
-    logger.info("Testing command line arguments...")
+    """测试 Orchestrator 是否能正确接受命令行参数。"""
+    logger.info("测试命令行参数...")
 
     # Test with different max_concurrent values
     test_cases = [1, 3, 5]
@@ -104,18 +104,18 @@ def test_command_line_arguments():
         try:
             orchestrator = AlphaOrchestrator("./credential.txt")
             orchestrator.max_concurrent_simulations = max_concurrent
-            logger.info(f"✓ Set max_concurrent to {max_concurrent}")
+            logger.info(f"✓ 设置 max_concurrent 为 {max_concurrent}")
         except Exception as e:
-            logger.error(f"✗ Failed to set max_concurrent to {max_concurrent}: {e}")
+            logger.error(f"✗ 设置 max_concurrent 为 {max_concurrent} 失败: {e}")
             return False
 
-    logger.info("✓ All command line argument tests passed")
+    logger.info("✓ 所有命令行参数测试通过")
     return True
 
 
 def main():
-    """Run all tests."""
-    logger.info("Starting Alpha Orchestrator tests...")
+    """运行所有测试。"""
+    logger.info("开始 Alpha Orchestrator 测试...")
 
     tests = [
         ("Orchestrator Initialization", test_orchestrator_initialization),
@@ -128,17 +128,17 @@ def main():
 
     for test_name, test_func in tests:
         logger.info(f"\n{'='*50}")
-        logger.info(f"Running test: {test_name}")
+        logger.info(f"正在运行测试: {test_name}")
         logger.info(f"{'='*50}")
 
         try:
             if test_func():
-                logger.info(f"✓ {test_name} PASSED")
+                logger.info(f"✓ {test_name} 测试通过")
                 passed += 1
             else:
-                logger.error(f"✗ {test_name} FAILED")
+                logger.error(f"✗ {test_name} 测试失败")
         except Exception as e:
-            logger.error(f"✗ {test_name} FAILED with exception: {e}")
+            logger.error(f"✗ {test_name} 测试失败，异常: {e}")
 
     logger.info(f"\n{'='*50}")
     logger.info(f"Test Results: {passed}/{total} tests passed")
@@ -150,7 +150,7 @@ def main():
         )
         return 0
     else:
-        logger.error("❌ Some tests failed. Please check the logs above.")
+        logger.error("❌ 部分测试失败。请检查上面的日志。")
         return 1
 
 

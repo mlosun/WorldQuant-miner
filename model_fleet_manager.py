@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Model Fleet Manager for WorldQuant Alpha Mining System
-Automatically manages model hierarchy and downgrades when VRAM issues occur.
+WorldQuant Alpha 挖掘系统的模型舰队管理器
+自动管理模型层级，并在 VRAM 问题发生时降级。
 """
 
 import json
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ModelInfo:
-    """Information about a model in the fleet."""
+    """舰队中模型的信息。"""
 
     name: str
     size_mb: int
@@ -32,13 +32,13 @@ class ModelInfo:
 
 
 class ModelFleetManager:
-    """Manages a fleet of models with automatic downgrading on VRAM issues."""
+    """管理模型舰队，并在 VRAM 问题时自动降级。"""
 
     def __init__(self, container_name: str = "naive-ollma-gpu"):
         self.container_name = container_name
         self.current_model_index = 0
         self.vram_error_count = 0
-        self.max_vram_errors = 3  # Number of VRAM errors before downgrading
+        self.max_vram_errors = 3  # 降级前的 VRAM 错误次数
 
         # Model fleet ordered by priority (largest to smallest)
         self.model_fleet = [
@@ -48,12 +48,12 @@ class ModelFleetManager:
             ModelInfo("qwen2.5:0.5b", 397, 4, "Tiny model - 0.5B parameters"),
         ]
 
-        # State file to persist current model selection
+        # 保存当前模型选择的状态文件
         self.state_file = "model_fleet_state.json"
         self.load_state()
 
     def load_state(self):
-        """Load the current model state from file."""
+        """从文件加载当前模型状态。"""
         try:
             if os.path.exists(self.state_file):
                 with open(self.state_file, "r") as f:
@@ -61,15 +61,15 @@ class ModelFleetManager:
                     self.current_model_index = state.get("current_model_index", 0)
                     self.vram_error_count = state.get("vram_error_count", 0)
                     logger.info(
-                        f"Loaded state: model_index={self.current_model_index}, vram_errors={self.vram_error_count}"
+                        f"已加载状态: model_index={self.current_model_index}, vram_errors={self.vram_error_count}"
                     )
         except Exception as e:
-            logger.warning(f"Could not load state: {e}")
+            logger.warning(f"无法加载状态: {e}")
             self.current_model_index = 0
             self.vram_error_count = 0
 
     def save_state(self):
-        """Save the current model state to file."""
+        """将当前模型状态保存到文件。"""
         try:
             state = {
                 "current_model_index": self.current_model_index,
@@ -79,18 +79,18 @@ class ModelFleetManager:
             }
             with open(self.state_file, "w") as f:
                 json.dump(state, f, indent=2)
-            logger.info(f"Saved state: {state}")
+            logger.info(f"已保存状态: {state}")
         except Exception as e:
-            logger.error(f"Could not save state: {e}")
+            logger.error(f"无法保存状态: {e}")
 
     def get_current_model(self) -> ModelInfo:
-        """Get the current model in use."""
+        """获取当前使用的模型。"""
         if self.current_model_index >= len(self.model_fleet):
             self.current_model_index = len(self.model_fleet) - 1
         return self.model_fleet[self.current_model_index]
 
     def get_available_models(self) -> List[str]:
-        """Get list of available models in the container."""
+        """获取容器中可用的模型列表。"""
         try:
             result = subprocess.run(
                 ["docker", "exec", self.container_name, "ollama", "list"],
@@ -109,21 +109,21 @@ class ModelFleetManager:
                             models.append(parts[0])
                 return models
             else:
-                logger.error(f"Failed to get available models: {result.stderr}")
+                logger.error(f"获取可用模型失败: {result.stderr}")
                 return []
         except Exception as e:
-            logger.error(f"Error getting available models: {e}")
+            logger.error(f"获取可用模型时出错: {e}")
             return []
 
     def ensure_model_available(self, model_name: str) -> bool:
-        """Ensure a specific model is available, download if needed."""
+        """确保特定模型可用，必要时下载。"""
         available_models = self.get_available_models()
 
         if model_name in available_models:
-            logger.info(f"Model {model_name} is already available")
+            logger.info(f"模型 {model_name} 已可用")
             return True
 
-        logger.info(f"Model {model_name} not found, downloading...")
+        logger.info(f"模型 {model_name} 未找到，正在下载...")
         try:
             result = subprocess.run(
                 ["docker", "exec", self.container_name, "ollama", "pull", model_name],
@@ -133,17 +133,17 @@ class ModelFleetManager:
             )  # 10 minute timeout
 
             if result.returncode == 0:
-                logger.info(f"Successfully downloaded model {model_name}")
+                logger.info(f"成功下载模型 {model_name}")
                 return True
             else:
-                logger.error(f"Failed to download model {model_name}: {result.stderr}")
+                logger.error(f"下载模型 {model_name} 失败: {result.stderr}")
                 return False
         except Exception as e:
-            logger.error(f"Error downloading model {model_name}: {e}")
+            logger.error(f"下载模型 {model_name} 时出错: {e}")
             return False
 
     def detect_vram_error(self, log_line: str) -> bool:
-        """Detect VRAM recovery timeout errors in log lines."""
+        """检测日志行中的 VRAM 恢复超时错误。"""
         vram_error_indicators = [
             "gpu VRAM usage didn't recover within timeout",
             "VRAM usage didn't recover",
@@ -157,10 +157,10 @@ class ModelFleetManager:
         )
 
     def handle_vram_error(self) -> bool:
-        """Handle VRAM error by downgrading to a smaller model."""
+        """通过降级到更小的模型来处理 VRAM 错误。"""
         self.vram_error_count += 1
         logger.warning(
-            f"VRAM error detected! Count: {self.vram_error_count}/{self.max_vram_errors}"
+            f"检测到 VRAM 错误！计数: {self.vram_error_count}/{self.max_vram_errors}"
         )
 
         if self.vram_error_count >= self.max_vram_errors:
@@ -170,20 +170,20 @@ class ModelFleetManager:
         return False
 
     def downgrade_model(self) -> bool:
-        """Downgrade to the next smaller model in the fleet."""
+        """降级到舰队中的下一个更小的模型。"""
         if self.current_model_index >= len(self.model_fleet) - 1:
-            logger.error("Already using the smallest model in the fleet!")
+            logger.error("已经在使用舰队中最小的模型！")
             return False
 
         old_model = self.get_current_model()
         self.current_model_index += 1
         new_model = self.get_current_model()
 
-        logger.warning(f"Downgrading model: {old_model.name} -> {new_model.name}")
+        logger.warning(f"正在降级模型: {old_model.name} -> {new_model.name}")
 
         # Ensure the new model is available
         if not self.ensure_model_available(new_model.name):
-            logger.error(f"Failed to ensure model {new_model.name} is available")
+            logger.error(f"无法确保模型 {new_model.name} 可用")
             self.current_model_index -= 1  # Revert
             return False
 
@@ -197,7 +197,7 @@ class ModelFleetManager:
         return self.restart_with_new_model(new_model.name)
 
     def restart_with_new_model(self, model_name: str) -> bool:
-        """Restart the application with the new model."""
+        """使用新模型重新启动应用程序。"""
         logger.info(f"Restarting application with model: {model_name}")
 
         try:
